@@ -284,8 +284,8 @@ export default function HomeValueWidget() {
       {/* Footer */}
       <div className="px-6 py-4 bg-gray-50 border-t">
         <p className="text-xs text-gray-500 text-center">
-          Powered by <a href="https://cravkey.com" className="text-emerald-600 hover:underline">CravKey</a> | 
-          Part of the <a href="https://cravproperty.com" className="text-emerald-600 hover:underline">CravProperty</a> Ecosystem
+          Powered by <a href="https://javarikeys.com" className="text-emerald-600 hover:underline">Javari Keys</a> | 
+          Part of the <a href="https://javariproperty.com" className="text-emerald-600 hover:underline">Javari Property</a> Ecosystem
         </p>
       </div>
     </div>

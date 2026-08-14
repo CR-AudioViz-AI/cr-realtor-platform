@@ -286,7 +286,7 @@ export default function MortgageCalculatorWidget() {
       <div className="px-6 py-4 bg-gray-50 border-t">
         <p className="text-xs text-gray-500 text-center">
           Powered by <a href="https://rateunlock.com" className="text-amber-600 hover:underline">RateUnlock</a> | 
-          Part of the <a href="https://cravproperty.com" className="text-amber-600 hover:underline">CravProperty</a> Ecosystem
+          Part of the <a href="https://javariproperty.com" className="text-amber-600 hover:underline">Javari Property</a> Ecosystem
         </p>
       </div>
     </div>

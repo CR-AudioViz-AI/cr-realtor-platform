@@ -9,7 +9,7 @@ const BRAND_CONFIG = {
     tagline: 'Find Your Perfect Home',
     primaryColor: '#06B6D4', // cyan
     logoText: 'Zoyzy',
-    showCravKeyBranding: false,
+    showJavari KeysBranding: false,
     isConsumerFacing: true,
   },
   'www.zoyzy.com': {
@@ -18,46 +18,46 @@ const BRAND_CONFIG = {
     tagline: 'Find Your Perfect Home',
     primaryColor: '#06B6D4',
     logoText: 'Zoyzy',
-    showCravKeyBranding: false,
+    showJavari KeysBranding: false,
     isConsumerFacing: true,
   },
-  'cravkey.com': {
-    brand: 'cravkey',
-    name: 'CravKey',
+  'javarikeys.com': {
+    brand: 'javarikeys',
+    name: 'Javari Keys',
     tagline: 'AI-Powered Realtor Platform',
     primaryColor: '#10B981', // emerald
-    logoText: 'CravKey',
-    showCravKeyBranding: true,
+    logoText: 'Javari Keys',
+    showJavari KeysBranding: true,
     isConsumerFacing: false,
   },
-  'www.cravkey.com': {
-    brand: 'cravkey',
-    name: 'CravKey',
+  'www.javarikeys.com': {
+    brand: 'javarikeys',
+    name: 'Javari Keys',
     tagline: 'AI-Powered Realtor Platform',
     primaryColor: '#10B981',
-    logoText: 'CravKey',
-    showCravKeyBranding: true,
+    logoText: 'Javari Keys',
+    showJavari KeysBranding: true,
     isConsumerFacing: false,
   },
   'realtor.craudiovizai.com': {
-    brand: 'cravkey',
-    name: 'CravKey',
+    brand: 'javarikeys',
+    name: 'Javari Keys',
     tagline: 'AI-Powered Realtor Platform',
     primaryColor: '#10B981',
-    logoText: 'CravKey',
-    showCravKeyBranding: true,
+    logoText: 'Javari Keys',
+    showJavari KeysBranding: true,
     isConsumerFacing: false,
   },
 }
 
 // Default config for preview/dev deployments
 const DEFAULT_CONFIG = {
-  brand: 'cravkey',
-  name: 'CravKey',
+  brand: 'javarikeys',
+  name: 'Javari Keys',
   tagline: 'AI-Powered Realtor Platform',
   primaryColor: '#10B981',
-  logoText: 'CravKey',
-  showCravKeyBranding: true,
+  logoText: 'Javari Keys',
+  showJavari KeysBranding: true,
   isConsumerFacing: false,
 }
 

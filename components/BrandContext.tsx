@@ -12,11 +12,11 @@ interface BrandConfig {
 }
 
 const defaultBrand: BrandConfig = {
-  brand: 'cravkey',
-  name: 'CravKey',
+  brand: 'javarikeys',
+  name: 'Javari Keys',
   tagline: 'AI-Powered Realtor Platform',
   primaryColor: '#10B981',
-  logoText: 'CravKey',
+  logoText: 'Javari Keys',
   isConsumer: false,
 }
 
@@ -51,11 +51,11 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
       })
     } else {
       setBrand({
-        brand: cookies.brand || 'cravkey',
-        name: cookies.brandName || 'CravKey',
+        brand: cookies.brand || 'javarikeys',
+        name: cookies.brandName || 'Javari Keys',
         tagline: 'AI-Powered Realtor Platform',
         primaryColor: '#10B981',
-        logoText: 'CravKey',
+        logoText: 'Javari Keys',
         isConsumer: cookies.isConsumer === 'true',
       })
     }

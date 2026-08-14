@@ -71,7 +71,7 @@ CR AudioViz AI operates a multi-tenant SaaS platform with 15+ distinct modules s
 │  ├── javari-ai (Next.js 14)                                     │
 │  ├── barvault (Next.js 14)                                      │
 │  ├── stock-picker (Next.js)                                     │
-│  ├── craiverse (Next.js)                                        │
+│  ├── javariverse (Next.js)                                        │
 │  └── [16 more projects...]                                      │
 └─────────────────────────────────────────────────────────────────┘
                               │
@@ -128,7 +128,7 @@ CR AudioViz AI operates a multi-tenant SaaS platform with 15+ distinct modules s
 | Security | `07-SECURITY.md` | 9 | all apps |
 | Marketplace | `08-MARKETPLACE.md` | 18 | marketplace |
 | AI/ML | `09-AI-ML.md` | 16 | all apps |
-| CRAIverse | `10-CRAIVERSE.md` | 11 | craiverse |
+| Javariverse | `10-JAVARIVERSE.md` | 11 | javariverse |
 | News/Content | `11-CONTENT.md` | 10 | various |
 | Competitor Intel | `12-INTEL.md` | 4 | admin |
 | Marketing | `13-MARKETING.md` | 6 | marketing |
@@ -1397,7 +1397,7 @@ active, paused, stopped, error, maintenance
 CR-AudioViz-AI/cr-realtor-platform
 CR-AudioViz-AI/javari-ai
 CR-AudioViz-AI/barvault
-CR-AudioViz-AI/craiverse
+CR-AudioViz-AI/javariverse
 CR-AudioViz-AI/admin-dashboard
 [... 20 more ...]
 ```
