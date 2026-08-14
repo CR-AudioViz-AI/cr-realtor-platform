@@ -68,10 +68,25 @@ export function middleware(request: NextRequest) {
   // Get brand config based on hostname
   const brandConfig = BRAND_CONFIG[cleanHostname as keyof typeof BRAND_CONFIG] || DEFAULT_CONFIG
   
-  // Clone the response
-  const response = NextResponse.next()
+  // 2026-08-14: this used to be NextResponse.next() with the brand set on the
+  // RESPONSE only. A response header reaches the browser but never reaches the
+  // app, so generateMetadata and every server component were blind to it — which
+  // is why zoyzy.com served a page titled "Javari Realty" with realtor tools on
+  // it. Exactly the same defect as x-entry-domain on the core platform.
+  //
+  // Forwarding on the REQUEST is what lets one engine serve two branded front
+  // doors: Zoyzy for consumers, Javari Keys for agents.
+  const forwarded = new Headers(request.headers)
+  forwarded.set('x-brand', brandConfig.brand)
+  forwarded.set('x-brand-name', brandConfig.name)
+  forwarded.set('x-brand-tagline', brandConfig.tagline)
+  forwarded.set('x-brand-color', brandConfig.primaryColor)
+  forwarded.set('x-brand-logo', brandConfig.logoText)
+  forwarded.set('x-is-consumer', brandConfig.isConsumerFacing ? 'true' : 'false')
+
+  const response = NextResponse.next({ request: { headers: forwarded } })
   
-  // Set brand info in headers for use by components
+  // Kept on the response too: the client BrandContext reads these.
   response.headers.set('x-brand', brandConfig.brand)
   response.headers.set('x-brand-name', brandConfig.name)
   response.headers.set('x-brand-tagline', brandConfig.tagline)
