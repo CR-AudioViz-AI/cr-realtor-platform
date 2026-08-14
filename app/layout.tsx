@@ -3,6 +3,7 @@
 // CR AudioViz AI · EIN 39-3646201 · May 2026
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
+import AttributionTracker from '@/components/AttributionTracker'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body style={{ margin: 0, padding: 0, fontFamily: 'system-ui,sans-serif' }}>
+        <AttributionTracker />
         <div style={{ background: 'rgba(7,8,15,0.95)', backdropFilter: 'blur(8px)', height: 48, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, borderBottom: '1px solid rgba(99,102,241,0.12)' }}>
           <a href="https://craudiovizai.com" style={{ color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 16 }}>🏠</span>

@@ -1,288 +1,246 @@
+// app/api/attribution/route.ts — agent attribution
+//
+// The commercial premise of Zoyzy: a consumer who arrives through an agent's
+// link stays attributed to that agent, so the lead routes to them and no
+// 35-40% referral fee is paid to anyone.
+//
+// 2026-08-14 rewrite. What was wrong with the previous version:
+//
+//   It defined getSupabase() and then used a bare `supabase` identifier that
+//   was never declared — lines 46, 85, 142 and 220. Every request threw a
+//   ReferenceError. Confirmed against production: POST returned
+//   {"success":false,"message":"Failed to record attribution"}. Not one
+//   attribution event has ever been recorded.
+//
+//   It queried attribution_events and attribution_chains, neither of which
+//   existed in the database.
+//
+//   It checked consent_records for agent_id, status, scope and expires_at.
+//   That table has none of those columns — it has session_id, purposes (jsonb)
+//   and recorded_at. The consent gate could never have passed.
+//
+// The design fault underneath: it assumed a signed-in user with a known
+// agent_id at the moment of attribution. The actual case is an ANONYMOUS
+// visitor clicking zoyzy.com/search?ref=tony-harvey. There is no user yet —
+// only a session. Events carry session_id and gain user_id later, at signup.
+//
+// CR AudioViz AI, LLC · EIN 39-3646201
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
-// =============================================================================
-// ATTRIBUTION TRACKING API
-// CR AudioViz AI - Realtor Platform
-// Created: Monday, December 30, 2025 | 12:59 PM EST
-// Endpoint: POST /api/attribution
-// Only tracks when user has granted consent
-// =============================================================================
 
-import { NextRequest, NextResponse } from 'next/server';
-import { AttributionRequest, AttributionSource } from '@/types/attribution';
-
-function getSupabase() {
-  var sb = require('@supabase/supabase-js')
-  var url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  var key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url || !key) return null
-  return sb.createClient(url, key, { auth: { persistSession: false } })
+/** Built on first use — a build must never need a service-role key. */
+let _db: SupabaseClient | null = null
+function db(): SupabaseClient {
+  if (_db) return _db
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for attribution')
+  }
+  _db = createClient(url, key, { auth: { persistSession: false } })
+  return _db
 }
 
+const ATTRIBUTION_WINDOW_DAYS = 30
 
+interface Body {
+  session_id?: string
+  user_id?: string | null
+  agent_ref?: string
+  source?: string
+  landing_page?: string
+  referrer_url?: string | null
+  utm?: Record<string, string | undefined>
+}
 
-// POST - Record attribution event (only with consent)
-export async function POST(request: NextRequest) {
+/**
+ * Confidence that this attribution is real rather than noise. Not a gate —
+ * a low score is still recorded, because the alternative is silently losing a
+ * legitimate lead. It exists so disputes between agents can be judged.
+ */
+function trustScore(b: Body): number {
+  let score = 50
+  if (b.referrer_url) score += 10
+  if (b.utm?.source) score += 10
+  if (b.utm?.medium) score += 10
+  if (b.utm?.campaign) score += 10
+  if (b.source === 'referral') score += 8
+  return Math.min(score, 100)
+}
+
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  let body: Body
   try {
-    const body: AttributionRequest = await request.json();
-    const { 
-      user_id, 
-      agent_id, 
-      source, 
-      landing_page, 
-      referrer_url, 
-      utm_params 
-    } = body;
+    body = (await request.json()) as Body
+  } catch {
+    return NextResponse.json({ success: false, message: 'Invalid JSON' }, { status: 400 })
+  }
 
-    // Validate required fields
-    if (!user_id || !agent_id || !source || !landing_page) {
-      return NextResponse.json(
-        { success: false, message: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
+  const sessionId = body.session_id?.trim()
+  const agentRef = body.agent_ref?.trim()
+  if (!sessionId || !agentRef) {
+    return NextResponse.json(
+      { success: false, message: 'session_id and agent_ref are required' },
+      { status: 400 },
+    )
+  }
 
-    // CRITICAL: Check if user has granted attribution consent
-    const { data: consent, error: consentError } = await supabase
+  try {
+    const sb = db()
+
+    // Consent is checked against the table as it actually exists: purposes is
+    // jsonb, and attribution is only recorded when the visitor allowed it.
+    // No consent record simply means no tracking — not an error, and never a
+    // reason to fail the page the visitor is looking at.
+    const { data: consent } = await sb
       .from('consent_records')
-      .select('id, scope, status, expires_at')
-      .eq('user_id', user_id)
-      .eq('agent_id', agent_id)
-      .eq('status', 'granted')
-      .single();
+      .select('id, purposes, recorded_at')
+      .eq('session_id', sessionId)
+      .order('recorded_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
-    if (consentError || !consent) {
-      // No consent - do NOT track
+    const purposes = (consent?.purposes ?? []) as unknown
+    const allowed =
+      Array.isArray(purposes)
+        ? purposes.includes('attribution') || purposes.includes('all')
+        : typeof purposes === 'object' && purposes !== null
+          ? Boolean((purposes as Record<string, unknown>).attribution)
+          : false
+
+    if (!consent || !allowed) {
       return NextResponse.json({
-        success: false,
+        success: true,
         tracked: false,
-        message: 'Attribution not recorded - user has not granted consent',
-      });
+        message: 'Attribution not recorded — no consent for this session',
+      })
     }
 
-    // Check if consent has expired
-    if (consent.expires_at && new Date(consent.expires_at) < new Date()) {
-      return NextResponse.json({
-        success: false,
-        tracked: false,
-        message: 'Attribution not recorded - consent has expired',
-      });
-    }
+    const score = trustScore(body)
 
-    // Check if attribution scope is included in consent
-    if (!consent.scope.includes('attribution') && !consent.scope.includes('all')) {
-      return NextResponse.json({
-        success: false,
-        tracked: false,
-        message: 'Attribution not recorded - attribution scope not consented',
-      });
-    }
-
-    // Calculate trust score based on data quality
-    const trustScore = calculateTrustScore(body);
-
-    // Record the attribution event
-    const { data, error } = await supabase
+    const { data: event, error: eventErr } = await sb
       .from('attribution_events')
       .insert({
-        user_id,
-        agent_id,
-        source,
-        campaign_id: utm_params?.campaign || null,
-        referrer_url: referrer_url || null,
-        landing_page,
-        utm_source: utm_params?.source || null,
-        utm_medium: utm_params?.medium || null,
-        utm_campaign: utm_params?.campaign || null,
-        utm_term: utm_params?.term || null,
-        utm_content: utm_params?.content || null,
+        session_id: sessionId,
+        user_id: body.user_id ?? null,
+        agent_ref: agentRef,
+        source: body.source ?? 'referral',
+        landing_page: body.landing_page ?? null,
+        referrer_url: body.referrer_url ?? null,
+        utm_source: body.utm?.source ?? null,
+        utm_medium: body.utm?.medium ?? null,
+        utm_campaign: body.utm?.campaign ?? null,
+        utm_term: body.utm?.term ?? null,
+        utm_content: body.utm?.content ?? null,
+        trust_score: score,
         consent_id: consent.id,
-        trust_score: trustScore,
       })
-      .select()
-      .single();
+      .select('id')
+      .single()
 
-    if (error) throw error;
+    if (eventErr) throw new Error(eventErr.message)
 
-    // Update attribution chain if exists, or create new one
-    await updateAttributionChain(user_id, agent_id, data.id, source);
-
-    return NextResponse.json({
-      success: true,
-      tracked: true,
-      attribution_id: data.id,
-      trust_score: trustScore,
-      message: 'Attribution recorded with consent',
-    });
-  } catch (error) {
-    console.error('Attribution API error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Failed to record attribution' },
-      { status: 500 }
-    );
-  }
-}
-
-// GET - Get attribution data for an agent (with consent verification)
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const agentId = searchParams.get('agent_id');
-    const userId = searchParams.get('user_id');
-    const startDate = searchParams.get('start_date');
-    const endDate = searchParams.get('end_date');
-
-    if (!agentId) {
-      return NextResponse.json(
-        { success: false, message: 'Missing agent_id' },
-        { status: 400 }
-      );
-    }
-
-    let query = supabase
-      .from('attribution_events')
-      .select(`
-        *,
-        consent_records!inner(status, scope)
-      `)
-      .eq('agent_id', agentId)
-      .eq('consent_records.status', 'granted');
-
-    if (userId) {
-      query = query.eq('user_id', userId);
-    }
-
-    if (startDate) {
-      query = query.gte('created_at', startDate);
-    }
-
-    if (endDate) {
-      query = query.lte('created_at', endDate);
-    }
-
-    const { data, error } = await query.order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    // Aggregate stats
-    const stats = aggregateAttributionStats(data || []);
-
-    return NextResponse.json({
-      success: true,
-      events: data,
-      stats,
-      message: 'Attribution data retrieved',
-    });
-  } catch (error) {
-    console.error('Attribution GET error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Failed to retrieve attribution data' },
-      { status: 500 }
-    );
-  }
-}
-
-// Helper: Calculate trust score based on data quality
-function calculateTrustScore(data: AttributionRequest): number {
-  let score = 50; // Base score
-
-  // Add points for data completeness
-  if (data.referrer_url) score += 10;
-  if (data.utm_params?.source) score += 10;
-  if (data.utm_params?.medium) score += 10;
-  if (data.utm_params?.campaign) score += 10;
-
-  // Source quality bonuses
-  const sourceScores: Record<AttributionSource, number> = {
-    direct: 5,
-    referral: 8,
-    organic: 7,
-    email: 9,
-    social: 6,
-    advertising: 10,
-    partner: 8,
-  };
-  score += sourceScores[data.source] || 0;
-
-  // Cap at 100
-  return Math.min(score, 100);
-}
-
-// Helper: Update or create attribution chain
-async function updateAttributionChain(
-  userId: string,
-  agentId: string,
-  eventId: string,
-  source: AttributionSource
-) {
-  try {
-    // Check for existing chain
-    const { data: existingChain } = await supabase
-      .from('attribution_chains')
-      .select('id, touchpoints, total_touchpoints')
-      .eq('lead_id', userId)
-      .single();
-
+    // The chain is what an agent is actually paid on. first_touch is never
+    // overwritten: the agent whose link brought the visitor keeps the credit
+    // even if the visitor later arrives directly.
     const touchpoint = {
-      id: eventId,
-      agent_id: agentId,
-      source,
-      timestamp: new Date().toISOString(),
-    };
+      id: event.id,
+      agent_ref: agentRef,
+      source: body.source ?? 'referral',
+      at: new Date().toISOString(),
+    }
 
-    if (existingChain) {
-      // Update existing chain
-      const touchpoints = [...(existingChain.touchpoints || []), touchpoint];
-      
-      await supabase
+    const { data: chain } = await sb
+      .from('attribution_chains')
+      .select('id, touchpoints, first_touch_agent')
+      .eq('session_id', sessionId)
+      .maybeSingle()
+
+    if (chain) {
+      const touchpoints = [...((chain.touchpoints as unknown[]) ?? []), touchpoint]
+      await sb
         .from('attribution_chains')
         .update({
           touchpoints,
-          last_touch_agent_id: agentId,
+          last_touch_agent: agentRef,
           total_touchpoints: touchpoints.length,
+          user_id: body.user_id ?? null,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', existingChain.id);
+        .eq('id', chain.id)
     } else {
-      // Create new chain
-      await supabase
-        .from('attribution_chains')
-        .insert({
-          lead_id: userId,
-          touchpoints: [touchpoint],
-          first_touch_agent_id: agentId,
-          last_touch_agent_id: agentId,
-          total_touchpoints: 1,
-          attribution_model: 'last_touch', // Default model
-        });
+      await sb.from('attribution_chains').insert({
+        session_id: sessionId,
+        user_id: body.user_id ?? null,
+        first_touch_agent: agentRef,
+        last_touch_agent: agentRef,
+        touchpoints: [touchpoint],
+        total_touchpoints: 1,
+        expires_at: new Date(Date.now() + ATTRIBUTION_WINDOW_DAYS * 86400000).toISOString(),
+      })
     }
+
+    return NextResponse.json({ success: true, tracked: true, attribution_id: event.id, trust_score: score })
   } catch (error) {
-    console.error('Failed to update attribution chain:', error);
-    // Don't throw - chain update failure shouldn't break attribution
+    // An attribution failure must never break the page the visitor is on.
+    return NextResponse.json(
+      { success: false, tracked: false, message: error instanceof Error ? error.message : 'Failed to record attribution' },
+      { status: 500 },
+    )
   }
 }
 
-// Helper: Aggregate attribution stats
-function aggregateAttributionStats(events: any[]) {
-  if (events.length === 0) {
-    return {
-      total: 0,
-      by_source: {},
-      average_trust_score: 0,
-    };
+/** Agent-facing reporting. Identity is checked here, not left to RLS. */
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const agentRef = request.nextUrl.searchParams.get('agent_ref')
+  if (!agentRef) {
+    return NextResponse.json({ success: false, message: 'agent_ref is required' }, { status: 400 })
   }
 
-  const bySource: Record<string, number> = {};
-  let totalTrustScore = 0;
+  const auth = request.headers.get('authorization')
+  if (!auth?.startsWith('Bearer ')) {
+    return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
+  }
 
-  events.forEach((event) => {
-    bySource[event.source] = (bySource[event.source] || 0) + 1;
-    totalTrustScore += event.trust_score || 0;
-  });
+  try {
+    const sb = db()
+    const { data: user } = await sb.auth.getUser(auth.slice(7).trim())
+    if (!user?.user) {
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
+    }
 
-  return {
-    total: events.length,
-    by_source: bySource,
-    average_trust_score: Math.round(totalTrustScore / events.length),
-  };
+    const { data: events, error } = await sb
+      .from('attribution_events')
+      .select('id, session_id, user_id, agent_ref, source, landing_page, trust_score, created_at')
+      .eq('agent_ref', agentRef)
+      .order('created_at', { ascending: false })
+      .limit(500)
+
+    if (error) throw new Error(error.message)
+
+    const bySource: Record<string, number> = {}
+    let total = 0
+    for (const e of events ?? []) {
+      bySource[e.source] = (bySource[e.source] ?? 0) + 1
+      total += e.trust_score ?? 0
+    }
+
+    return NextResponse.json({
+      success: true,
+      events,
+      stats: {
+        total: events?.length ?? 0,
+        by_source: bySource,
+        average_trust_score: events?.length ? Math.round(total / events.length) : 0,
+      },
+    })
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, message: error instanceof Error ? error.message : 'Failed to retrieve attribution' },
+      { status: 500 },
+    )
+  }
 }

@@ -146,6 +146,51 @@ export function middleware(request: NextRequest) {
   forwarded.set('x-is-consumer', brandConfig.isConsumerFacing ? 'true' : 'false')
 
   const response = NextResponse.next({ request: { headers: forwarded } })
+
+  // ── AGENT ATTRIBUTION ──────────────────────────────────────────────────────
+  // 2026-08-14: the ?ref= capture did not exist. /api/attribution was written
+  // in December but nothing ever called it, and nothing set a session, so not
+  // one attribution event has ever been recorded. This is the piece that starts
+  // the chain — an agent shares zoyzy.com/search?ref=tony-harvey and the
+  // attribution survives for 30 days.
+  //
+  // Invisible to the consumer by design: no banner, no redirect, no parameter
+  // left in the URL bar beyond the first page. They are looking at homes, not
+  // at a tracking mechanism.
+  const ref = request.nextUrl.searchParams.get('ref')
+
+  let sessionId = request.cookies.get('zsid')?.value
+  if (!sessionId) {
+    sessionId = crypto.randomUUID()
+    response.cookies.set('zsid', sessionId, {
+      path: '/',
+      maxAge: 60 * 60 * 24 * 400,
+      sameSite: 'lax',
+      httpOnly: false, // the client reads it to send attribution events
+      secure: true,
+    })
+  }
+
+  if (ref) {
+    // First touch wins. An agent whose link brought the visitor keeps the
+    // credit even if a second agent's link is clicked later — overwriting here
+    // would let anyone steal a lead by getting the last click.
+    if (!request.cookies.get('zref')) {
+      response.cookies.set('zref', ref, {
+        path: '/',
+        maxAge: 60 * 60 * 24 * 30, // the 30-day attribution window
+        sameSite: 'lax',
+        httpOnly: false,
+        secure: true,
+      })
+    }
+    // Always record the touch, even when it is not the first — multi-touch
+    // history is what settles a dispute between two agents.
+    response.cookies.set('zref_last', ref, {
+      path: '/', maxAge: 60 * 60 * 24 * 30, sameSite: 'lax', httpOnly: false, secure: true,
+    })
+  }
+
   
   // Kept on the response too: the client BrandContext reads these.
   response.headers.set('x-brand', brandConfig.brand)
