@@ -48,6 +48,67 @@ const BRAND_CONFIG = {
     showJavariKeysBranding: true,
     isConsumerFacing: false,
   },
+
+  // 2026-08-14: the rest of the property family. These four domains were
+  // pointed at small tools on the core platform — javarikeys.com served the
+  // PASSWORD GENERATOR, javarimanage.com a generic project manager — while this
+  // 166-page app sat on another project. Javari Property is the hub; Zoyzy is
+  // the consumer front door, Keys the agent CRM, Manage the landlord tools,
+  // Mortgage the rates surface that feeds rateunlock.com.
+  'javariproperty.com': {
+    brand: 'javariproperty',
+    name: 'Javari Property',
+    tagline: 'Property, end to end',
+    primaryColor: '#6366F1', // indigo
+    logoText: 'Javari Property',
+    showJavariKeysBranding: false,
+    isConsumerFacing: true,
+  },
+  'www.javariproperty.com': {
+    brand: 'javariproperty',
+    name: 'Javari Property',
+    tagline: 'Property, end to end',
+    primaryColor: '#6366F1',
+    logoText: 'Javari Property',
+    showJavariKeysBranding: false,
+    isConsumerFacing: true,
+  },
+  'javarimanage.com': {
+    brand: 'javarimanage',
+    name: 'Javari Manage',
+    tagline: 'Landlord and property management',
+    primaryColor: '#F59E0B', // amber
+    logoText: 'Javari Manage',
+    showJavariKeysBranding: false,
+    isConsumerFacing: false,
+  },
+  'www.javarimanage.com': {
+    brand: 'javarimanage',
+    name: 'Javari Manage',
+    tagline: 'Landlord and property management',
+    primaryColor: '#F59E0B',
+    logoText: 'Javari Manage',
+    showJavariKeysBranding: false,
+    isConsumerFacing: false,
+  },
+  'javarimortgage.com': {
+    brand: 'javarimortgage',
+    name: 'Javari Mortgage',
+    tagline: 'Rates, affordability and lender comparison',
+    primaryColor: '#0EA5E9', // sky
+    logoText: 'Javari Mortgage',
+    showJavariKeysBranding: false,
+    isConsumerFacing: true,
+  },
+  'www.javarimortgage.com': {
+    brand: 'javarimortgage',
+    name: 'Javari Mortgage',
+    tagline: 'Rates, affordability and lender comparison',
+    primaryColor: '#0EA5E9',
+    logoText: 'Javari Mortgage',
+    showJavariKeysBranding: false,
+    isConsumerFacing: true,
+  },
 }
 
 // Default config for preview/dev deployments
