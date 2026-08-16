@@ -1,7 +1,7 @@
 // lib/apis/fred-mortgage.ts
 // Federal Reserve Economic Data (FRED) API - FREE
 // Live mortgage rates updated weekly
-// API Key: fc8d5b44ab7b1b7b47da21d2454d0f2a
+// API Key: <FRED_API_KEY — from the vault, never in source>
 
 export interface MortgageRate {
   date: string
@@ -24,7 +24,7 @@ export interface MortgageRatesData {
   sourceUrl: string
 }
 
-const FRED_API_KEY = process.env.FRED_API_KEY || 'fc8d5b44ab7b1b7b47da21d2454d0f2a'
+const FRED_API_KEY = process.env.FRED_API_KEY || (process.env.FRED_API_KEY ?? '')
 const FRED_BASE_URL = 'https://api.stlouisfed.org/fred'
 
 // FRED Series IDs for mortgage rates

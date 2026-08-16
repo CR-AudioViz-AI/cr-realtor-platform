@@ -1,7 +1,7 @@
 // lib/apis/stock-photos.ts
 // Unsplash + Pexels integration for property photos
 // Unsplash: RGhtUK7SaxoO-H1TbR2Eq1DDya2-VORV1HfcL3wdFWI
-// Pexels: XhHPflM40HL16idL54LxkZOMHBNHUpETfidOdlfbLQsH4WTxjyjWgrJd
+// Pexels: <PEXELS_API_KEY — from the vault, never in source>
 
 export interface StockPhoto {
   id: string
@@ -26,7 +26,7 @@ export interface PhotoSearchResult {
 }
 
 const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY || 'RGhtUK7SaxoO-H1TbR2Eq1DDya2-VORV1HfcL3wdFWI'
-const PEXELS_API_KEY = process.env.PEXELS_API_KEY || 'XhHPflM40HL16idL54LxkZOMHBNHUpETfidOdlfbLQsH4WTxjyjWgrJd'
+const PEXELS_API_KEY = process.env.PEXELS_API_KEY || (process.env.PEXELS_API_KEY ?? '')
 
 // Real estate search queries for curated results
 export const RE_PHOTO_QUERIES = {

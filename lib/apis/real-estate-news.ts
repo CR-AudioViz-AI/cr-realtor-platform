@@ -1,7 +1,7 @@
 // lib/apis/real-estate-news.ts
 // NewsAPI + GNews integration for real estate news
-// Primary: NewsAPI (29a98d7494b74400b8423f0d1143e8ff)
-// Backup: GNews (bdcf37e0b6b8ad8fc5cb1bdd0cd8ff88)
+// Primary: NewsAPI (<NEWSAPI_KEY — from the vault, never in source>)
+// Backup: GNews (<GNEWS_API_KEY — from the vault, never in source>)
 
 export interface NewsArticle {
   id: string
@@ -25,8 +25,8 @@ export interface NewsResponse {
   source: 'newsapi' | 'gnews' | 'cache'
 }
 
-const NEWS_API_KEY = process.env.NEWSAPI_API_KEY || '29a98d7494b74400b8423f0d1143e8ff'
-const GNEWS_API_KEY = process.env.GNEWS_API_KEY || 'bdcf37e0b6b8ad8fc5cb1bdd0cd8ff88'
+const NEWS_API_KEY = process.env.NEWSAPI_API_KEY || (process.env.NEWSAPI_KEY ?? '')
+const GNEWS_API_KEY = process.env.GNEWS_API_KEY || (process.env.GNEWS_API_KEY ?? '')
 
 // Real estate related search terms
 const RE_KEYWORDS = [
