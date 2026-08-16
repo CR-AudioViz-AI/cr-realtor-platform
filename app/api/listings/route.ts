@@ -129,10 +129,32 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     )
   }
 
-  if (sp.get('minprice')) params.set('minPrice', sp.get('minprice')!)
-  if (sp.get('maxprice')) params.set('maxPrice', sp.get('maxprice')!)
-  if (sp.get('minbeds')) params.set('bedrooms', sp.get('minbeds')!)
-  if (sp.get('type')) params.set('propertyType', sp.get('type')!)
+  // 2026-08-15: the search page sends minPrice/maxPrice/beds/baths in camelCase
+  // and this route only read lowercase, so every filter was silently ignored —
+  // a search for homes over $9,000,000 returned $325,000 listings. Accept both
+  // spellings rather than making the caller guess.
+  const pick = (...names: string[]): string | null => {
+    for (const n of names) {
+      const v = sp.get(n)
+      if (v) return v
+    }
+    return null
+  }
+  const minP = pick('minPrice', 'minprice')
+  const maxP = pick('maxPrice', 'maxprice')
+  const bedsQ = pick('beds', 'minbeds', 'bedrooms')
+  const bathsQ = pick('baths', 'minbaths', 'bathrooms')
+  const typeQ = pick('propertyType', 'type')
+  const sqftMin = pick('minSqft', 'minsqft')
+  const yearMin = pick('minYear', 'yearBuilt')
+
+  if (minP) params.set('minPrice', minP)
+  if (maxP) params.set('maxPrice', maxP)
+  if (bedsQ) params.set('bedrooms', bedsQ)
+  if (bathsQ) params.set('bathrooms', bathsQ)
+  if (typeQ) params.set('propertyType', typeQ)
+  if (sqftMin) params.set('minSquareFootage', sqftMin)
+  if (yearMin) params.set('minYearBuilt', yearMin)
 
   const url = `${RENTCAST_BASE}/listings/sale?${params.toString()}`
 
