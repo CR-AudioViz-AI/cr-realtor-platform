@@ -48,6 +48,7 @@ interface RentCastListing {
   price?: number
   listedDate?: string
   daysOnMarket?: number
+  hoa?: { fee?: number }
   listingAgent?: { name?: string }
   listingOffice?: { name?: string }
 }
@@ -69,6 +70,7 @@ function normalise(l: RentCastListing) {
     baths: l.bathrooms ?? 0,
     sqft,
     lotSize: l.lotSize ?? null,
+    hoaFee: l.hoa?.fee ?? null,
     yearBuilt: l.yearBuilt ?? null,
     propertyType: l.propertyType ?? 'Residential',
     status: (l.status ?? 'active').toLowerCase(),
@@ -102,8 +104,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const sp = request.nextUrl.searchParams
   const params = new URLSearchParams()
 
+  // Filtering happens in this route, not upstream, so fetch a wide page and
+  // narrow it here rather than returning 20 unfiltered rows.
   const limit = Math.min(parseInt(sp.get('limit') ?? '20', 10) || 20, 50)
-  params.set('limit', String(limit))
+  params.set('limit', String(Math.min(Math.max(limit * 5, 100), 500)))
   params.set('offset', String(parseInt(sp.get('offset') ?? '0', 10) || 0))
   params.set('status', 'Active')
 
@@ -207,7 +211,55 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       }),
     )
 
-    const body = { success: true, count: listings.length, listings, source: 'RentCast' }
+    // 2026-08-15: RentCast ACCEPTS minPrice and bedrooms and silently ignores
+    // them. Proven by calling it directly: with minPrice=900000 and without it,
+    // the identical three listings came back — 325000, 339900, 899000. Every
+    // filter has to be applied here or a buyer searching for a $900k home is
+    // shown a $325k one.
+    const num = (v: string | null): number | null => {
+      if (!v) return null
+      const n = Number(v)
+      return Number.isFinite(n) ? n : null
+    }
+    const fMinPrice = num(minP)
+    const fMaxPrice = num(maxP)
+    const fBeds = num(bedsQ)
+    const fBaths = num(bathsQ)
+    const fSqft = num(sqftMin)
+    const fYear = num(yearMin)
+    const fMaxDom = num(pick('maxDaysOnMarket', 'maxdom'))
+    const fMinLot = num(pick('minLotSize', 'minlot'))
+    const fMaxHoa = num(pick('maxHoa', 'maxhoa'))
+    const fType = typeQ ? typeQ.toLowerCase() : null
+
+    const filtered = listings.filter((l) => {
+      if (fMinPrice !== null && l.price < fMinPrice) return false
+      if (fMaxPrice !== null && l.price > fMaxPrice) return false
+      if (fBeds !== null && l.beds < fBeds) return false
+      if (fBaths !== null && l.baths < fBaths) return false
+      if (fSqft !== null && l.sqft < fSqft) return false
+      if (fYear !== null && (l.yearBuilt ?? 0) < fYear) return false
+      if (fMaxDom !== null && l.daysOnMarket > fMaxDom) return false
+      if (fMinLot !== null && (l.lotSize ?? 0) < fMinLot) return false
+      if (fMaxHoa !== null && (l.hoaFee ?? 0) > fMaxHoa) return false
+      if (fType && !l.propertyType.toLowerCase().includes(fType)) return false
+      return true
+    })
+
+    const sort = sp.get('sort') ?? ''
+    if (sort === 'price_asc') filtered.sort((a, b) => a.price - b.price)
+    else if (sort === 'price_desc') filtered.sort((a, b) => b.price - a.price)
+    else if (sort === 'newest') filtered.sort((a, b) => (b.listDate ?? '').localeCompare(a.listDate ?? ''))
+    else if (sort === 'sqft_desc') filtered.sort((a, b) => b.sqft - a.sqft)
+    else if (sort === 'ppsf_asc') filtered.sort((a, b) => (a.pricePerSqft ?? 1e9) - (b.pricePerSqft ?? 1e9))
+
+    const body = {
+      success: true,
+      count: filtered.length,
+      fetched: listings.length,
+      listings: filtered,
+      source: 'RentCast',
+    }
     cache.set(url, { at: Date.now(), body })
     return NextResponse.json(body)
   } catch (error) {
