@@ -11,6 +11,25 @@ import {
   GraduationCap, Loader2, ExternalLink
 } from 'lucide-react'
 
+interface PropertyInsight {
+  valuation: {
+    value: number
+    rangeLow: number | null
+    rangeHigh: number | null
+    confidence: string
+    spreadPercent: number | null
+    vsAsking: number | null
+    comparables: Array<{
+      address: string; price: number | null; beds: number | null; baths: number | null
+      sqft: number | null; milesAway: number | null; daysAgo: number | null; similarity: number | null
+    }>
+  } | null
+  rental: { rent: number; rangeLow: number | null; rangeHigh: number | null; grossYieldPercent: number | null } | null
+  flood: { zone: string; risk: string; insuranceRequired: boolean; plain: string } | null
+  walkability: { index: number; outOf: number; label: string } | null
+  schools: Array<{ name: string; type: string; district: string; rating: number | null; distance: string | null }>
+}
+
 interface PropertyDetail {
   id: string
   address: string
@@ -64,13 +83,11 @@ function getHighResPhoto(url: string): string {
   return url
 }
 
-// Placeholder images
-const PLACEHOLDER_IMAGES = [
-  'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&h=800&fit=crop',
-  'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&h=800&fit=crop',
-  'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&h=800&fit=crop',
-  'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200&h=800&fit=crop',
-]
+// 2026-08-15: this file shipped four Unsplash stock photographs of houses and
+// showed them whenever a listing had no photo. A stranger's home presented as
+// the one a buyer is considering is the same dishonesty as the demo listings
+// this platform served for months. Removed — a property shows a real Street View
+// photograph of its own address or it shows no photograph.
 
 export default function PropertyDetailPage() {
   const params = useParams()
@@ -82,6 +99,8 @@ export default function PropertyDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
   const [isFavorite, setIsFavorite] = useState(false)
+  // Everything the route knows about the address beyond the listing itself.
+  const [insight, setInsight] = useState<PropertyInsight | null>(null)
 
   useEffect(() => {
     if (propertyId) {
@@ -99,6 +118,13 @@ export default function PropertyDetailPage() {
       
       if (data.success && data.property) {
         setProperty(data.property)
+        setInsight({
+          valuation: data.valuation ?? null,
+          rental: data.rental ?? null,
+          flood: data.flood ?? null,
+          walkability: data.walkability ?? null,
+          schools: data.schools ?? [],
+        })
       } else {
         setError(data.error || 'Property not found')
       }
@@ -120,14 +146,14 @@ export default function PropertyDetailPage() {
 
   const nextPhoto = () => {
     if (property) {
-      const photos = property.photos.length > 0 ? property.photos : PLACEHOLDER_IMAGES
+      const photos = property.photos
       setCurrentPhotoIndex((prev) => (prev + 1) % photos.length)
     }
   }
 
   const prevPhoto = () => {
     if (property) {
-      const photos = property.photos.length > 0 ? property.photos : PLACEHOLDER_IMAGES
+      const photos = property.photos
       setCurrentPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length)
     }
   }
@@ -173,7 +199,7 @@ export default function PropertyDetailPage() {
     )
   }
 
-  const photos = property.photos.length > 0 ? property.photos : PLACEHOLDER_IMAGES
+  const photos = property.photos
   const currentPhoto = getHighResPhoto(photos[currentPhotoIndex])
 
   return (
@@ -528,6 +554,113 @@ export default function PropertyDetailPage() {
                 Calculate Your Payment →
               </Link>
             </div>
+
+            {/* Valuation — the Zestimate equivalent, with the comps behind it */}
+            {insight?.valuation && (
+              <div className="bg-white rounded-lg shadow p-6 mb-6">
+                <h3 className="text-lg font-bold mb-1">Estimated value</h3>
+                <div className="text-3xl font-bold text-blue-700">
+                  {formatPrice(insight.valuation.value)}
+                </div>
+                {insight.valuation.rangeLow != null && insight.valuation.rangeHigh != null && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    Range {formatPrice(insight.valuation.rangeLow)} – {formatPrice(insight.valuation.rangeHigh)}
+                    {' · '}
+                    <span className={
+                      insight.valuation.confidence === 'high' ? 'text-green-700'
+                      : insight.valuation.confidence === 'moderate' ? 'text-amber-700' : 'text-red-700'
+                    }>
+                      {insight.valuation.confidence} confidence
+                    </span>
+                  </p>
+                )}
+                {insight.valuation.vsAsking != null && (
+                  <p className="text-sm text-gray-700 mt-2">
+                    Asking price is {Math.abs(insight.valuation.vsAsking)}%{' '}
+                    {insight.valuation.vsAsking >= 0 ? 'above' : 'below'} the estimate.
+                  </p>
+                )}
+                {insight.valuation.comparables.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-semibold text-sm mb-2">Comparable sales</h4>
+                    <div className="space-y-2">
+                      {insight.valuation.comparables.map((c) => (
+                        <div key={c.address} className="text-sm flex justify-between border-b pb-1">
+                          <span className="truncate mr-2">{c.address}</span>
+                          <span className="whitespace-nowrap text-gray-700">
+                            {c.price != null ? formatPrice(c.price) : '—'}
+                            {c.milesAway != null ? ` · ${c.milesAway} mi` : ''}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Rental yield — the investor view */}
+            {insight?.rental && (
+              <div className="bg-white rounded-lg shadow p-6 mb-6">
+                <h3 className="text-lg font-bold mb-1">Rental estimate</h3>
+                <div className="text-2xl font-bold text-green-700">
+                  {formatPrice(insight.rental.rent)}<span className="text-base font-normal">/month</span>
+                </div>
+                {insight.rental.grossYieldPercent != null && (
+                  <p className="text-sm text-gray-700 mt-1">
+                    {insight.rental.grossYieldPercent}% gross yield at the asking price
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Flood risk — the fact a Florida lender decides on */}
+            {insight?.flood && (
+              <div className="bg-white rounded-lg shadow p-6 mb-6">
+                <h3 className="text-lg font-bold mb-1">Flood risk</h3>
+                <div className="flex items-center gap-2">
+                  <span className={
+                    'px-2 py-0.5 rounded text-sm font-semibold ' +
+                    (insight.flood.risk === 'high' ? 'bg-red-100 text-red-800'
+                     : insight.flood.risk === 'moderate' ? 'bg-amber-100 text-amber-800'
+                     : 'bg-green-100 text-green-800')
+                  }>
+                    Zone {insight.flood.zone} · {insight.flood.risk}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-700 mt-2">{insight.flood.plain}</p>
+                <p className="text-xs text-gray-400 mt-1">FEMA National Flood Hazard Layer</p>
+              </div>
+            )}
+
+            {/* Walkability */}
+            {insight?.walkability && (
+              <div className="bg-white rounded-lg shadow p-6 mb-6">
+                <h3 className="text-lg font-bold mb-1">Walkability</h3>
+                <div className="text-2xl font-bold text-blue-700">
+                  {insight.walkability.index}
+                  <span className="text-base font-normal text-gray-500">/{insight.walkability.outOf}</span>
+                </div>
+                <p className="text-sm text-gray-700">{insight.walkability.label}</p>
+                <p className="text-xs text-gray-400 mt-1">US EPA National Walkability Index</p>
+              </div>
+            )}
+
+            {/* Schools */}
+            {insight && insight.schools.length > 0 && (
+              <div className="bg-white rounded-lg shadow p-6 mb-6">
+                <h3 className="text-lg font-bold mb-3">Nearby schools</h3>
+                <div className="space-y-2">
+                  {insight.schools.slice(0, 6).map((sc) => (
+                    <div key={sc.name} className="text-sm flex justify-between border-b pb-1">
+                      <span className="truncate mr-2">{sc.name}</span>
+                      <span className="text-gray-600 whitespace-nowrap">{sc.type}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 mt-2">US Dept of Education, NCES</p>
+              </div>
+            )}
 
             {/* Data Source */}
             <div className="text-center text-sm text-gray-400">
