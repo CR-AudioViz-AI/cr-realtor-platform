@@ -29,11 +29,14 @@ const FEMA =
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 const cache = new Map<string, { at: number; body: unknown }>()
 
-const LEVELS: Record<string, string> = {
-  '1': 'Elementary',
-  '2': 'Middle',
-  '3': 'High',
-  '4': 'Other',
+/** The directory layer carries no level field, so infer it from the name. */
+function inferLevel(name: string): string {
+  const n = name.toUpperCase()
+  if (/\bELEMENTARY\b|\bPRIMARY\b/.test(n)) return 'Elementary'
+  if (/\bMIDDLE\b|\bJUNIOR\b/.test(n)) return 'Middle'
+  if (/\bHIGH\b|\bSENIOR\b/.test(n)) return 'High'
+  if (/\bCHARTER\b|\bACADEMY\b/.test(n)) return 'Charter/Academy'
+  return 'Other'
 }
 
 /** The EPA index runs 1–20. Translate it, because a bare number means nothing. */
@@ -44,23 +47,43 @@ function walkLabel(i: number): string {
   return 'Car dependent — most errands require a car'
 }
 
-async function schools(zip: string) {
+async function schools(zip: string, city?: string, state?: string) {
   const url =
     `${NCES}?where=LZIP%3D%27${encodeURIComponent(zip)}%27` +
-    `&outFields=SCH_NAME,LEA_NAME,LCITY,LZIP,LEVEL,ENROLLMENT,PHONE` +
+    // LEVEL and ENROLLMENT do NOT exist on this layer — requesting them makes
+    // the whole query return zero features rather than erroring, which is how
+    // this silently returned no schools. Only real fields here.
+    `&outFields=SCH_NAME,LEA_NAME,LSTREET1,LCITY,LSTATE,LZIP,PHONE` +
     `&returnGeometry=false&resultRecordCount=25&f=json`
   const res = await fetch(url, { signal: AbortSignal.timeout(15_000), cache: 'no-store' })
   if (!res.ok) return []
   const d = (await res.json()) as {
     features?: { attributes?: Record<string, string | number | null> }[]
   }
-  return (d.features ?? []).map((f) => {
+  let feats = d.features ?? []
+  // One ZIP frequently holds a single school. A buyer wants the schools around
+  // the home, so widen to the city when the caller supplied one.
+  if (feats.length < 3 && city && state) {
+    const cityUrl =
+      `${NCES}?where=LCITY%3D%27${encodeURIComponent(city.toUpperCase())}%27+AND+LSTATE%3D%27${encodeURIComponent(state.toUpperCase())}%27` +
+      `&outFields=SCH_NAME,LEA_NAME,LSTREET1,LCITY,LSTATE,LZIP,PHONE` +
+      `&returnGeometry=false&resultRecordCount=25&f=json`
+    try {
+      const r2 = await fetch(cityUrl, { signal: AbortSignal.timeout(15_000), cache: 'no-store' })
+      if (r2.ok) {
+        const d2 = (await r2.json()) as { features?: { attributes?: Record<string, string | number | null> }[] }
+        if ((d2.features ?? []).length > feats.length) feats = d2.features ?? []
+      }
+    } catch { /* keep the ZIP result */ }
+  }
+  return feats.map((f) => {
     const a = f.attributes ?? {}
     return {
       name: String(a.SCH_NAME ?? '').trim(),
       district: String(a.LEA_NAME ?? '').trim(),
-      level: LEVELS[String(a.LEVEL ?? '')] ?? 'Unknown',
-      enrollment: typeof a.ENROLLMENT === 'number' ? a.ENROLLMENT : null,
+      // Level is inferred from the name — the directory layer does not carry it.
+      level: inferLevel(String(a.SCH_NAME ?? '')),
+      address: String(a.LSTREET1 ?? '').trim(),
       city: String(a.LCITY ?? '').trim(),
       zip: String(a.LZIP ?? '').trim(),
       phone: String(a.PHONE ?? '').trim() || null,
@@ -127,7 +150,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   // Each source is independent — one failing must not lose the others.
   const [sch, walk, fld] = await Promise.all([
-    zip ? schools(zip).catch(() => []) : Promise.resolve([]),
+    schools(zip, sp.get('city') ?? undefined, sp.get('state') ?? undefined).catch(() => []),
     walkability(lat, lng).catch(() => null),
     flood(lat, lng).catch(() => null),
   ])
