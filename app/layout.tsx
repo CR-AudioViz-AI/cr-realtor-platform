@@ -35,11 +35,41 @@ export async function generateMetadata(): Promise<Metadata> {
   const description = b.consumer
     ? `${b.name} — ${b.tagline}. Search homes, track value, and work with an agent who is actually yours.`
     : `${b.name} — ${b.tagline}. Listings, market reports, client follow-up and closings in one place.`
+  // 2026-08-16: this app served no og:image, no icons and no canonical. The
+  // assets existed in public/ and nothing pointed at them, so every share was a
+  // blank grey rectangle and every tab a default globe.
+  //
+  // metadataBase is resolved from the request host rather than hardcoded,
+  // because one engine serves zoyzy.com, javarikeys.com and javariproperty.com
+  // — a fixed base would advertise the wrong domain on two of the three.
+  const host = (() => {
+    try {
+      return headers().get('x-forwarded-host') ?? headers().get('host') ?? 'zoyzy.com'
+    } catch {
+      return 'zoyzy.com'
+    }
+  })()
   return {
     title: b.name,
     description,
-    openGraph: { title: `${b.name} — CR AudioViz AI`, description, type: 'website' },
-    twitter: { card: 'summary_large_image', title: `${b.name} — CR AudioViz AI`, description },
+    metadataBase: new URL(`https://${host}`),
+    alternates: { canonical: '/' },
+    icons: {
+      icon: [{ url: '/favicon.png', sizes: '32x32' }, { url: '/icon-512.png', sizes: '512x512' }],
+      apple: '/apple-touch-icon.png',
+    },
+    openGraph: {
+      title: `${b.name} — CR AudioViz AI`,
+      description,
+      type: 'website',
+      images: [{ url: '/og-image.png', width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${b.name} — CR AudioViz AI`,
+      description,
+      images: ['/og-image.png'],
+    },
   }
 }
 export default function RootLayout({ children }: { children: React.ReactNode }) {
