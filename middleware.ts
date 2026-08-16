@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { track } from "@/lib/analytics/track"
 import type { NextRequest } from 'next/server'
 
 // Domain-based branding configuration
@@ -146,6 +147,27 @@ export function middleware(request: NextRequest) {
   forwarded.set('x-is-consumer', brandConfig.isConsumerFacing ? 'true' : 'false')
 
   const response = NextResponse.next({ request: { headers: forwarded } })
+
+  // ── VISITOR TRACKING ────────────────────────────────────────────────────────
+  // 2026-08-16: every request logged, human or machine. Fire and forget — a
+  // visitor must not wait on analytics and an analytics outage must not take a
+  // page down. Bots are counted rather than blocked, because a traffic figure
+  // that silently includes AhrefsBot is a lie told to yourself.
+  try {
+    void track({
+      path: request.nextUrl.pathname,
+      method: request.method,
+      userAgent: request.headers.get('user-agent') ?? '',
+      referrer: request.headers.get('referer'),
+      ip: (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || null,
+      country: request.headers.get('x-vercel-ip-country'),
+      appId: request.nextUrl.hostname,
+      sessionId: request.cookies.get('zsid')?.value ?? null,
+      userId: null,
+    })
+  } catch {
+    // Never let tracking break a request.
+  }
 
   // ── AGENT ATTRIBUTION ──────────────────────────────────────────────────────
   // 2026-08-14: the ?ref= capture did not exist. /api/attribution was written
