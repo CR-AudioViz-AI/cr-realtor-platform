@@ -1,5 +1,11 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
+// 2026-08-20: was a SERVER component gating on a cookie-based getUser(). Sessions
+// live in localStorage, so it returned null on every request and redirect()
+// renders a BLANK PAGE, not a 307. An agent has never seen this dashboard.
+//
+// Data comes from /api/me/realtor, behind requireUser(), where every query filters
+// on the VERIFIED caller's agent_id. Markup unchanged.
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   TrendingUp,
@@ -15,68 +21,55 @@ import {
   Clock,
 } from 'lucide-react';
 
-function getSupabase() {
-  var sb = require('@supabase/supabase-js')
-  var url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  var key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url || !key) return null
-  return sb.createClient(url, key, { auth: { persistSession: false } })
+
+
+interface Stats {
+  totalListings: number; activeListings: number; pendingListings: number; soldListings: number
+  newLeads: number; activeLeads: number; totalCustomers: number
 }
+const EMPTY: Stats = { totalListings:0, activeListings:0, pendingListings:0, soldListings:0, newLeads:0, activeLeads:0, totalCustomers:0 }
 
+export default function RealtorDashboard() {
+  const [properties, setProperties] = useState<any[]>([])
+  const [leads, setLeads] = useState<any[]>([])
+  const [stats, setStats] = useState<Stats>(EMPTY)
+  const [displayName, setDisplayName] = useState('Realtor')
+  const [firstName, setFirstName] = useState('there')
+  const [ready, setReady] = useState(false)
 
-export default async function RealtorDashboard() {
-  const supabase = await createClient()
+  useEffect(() => {
+    let live = true
+    ;(async () => {
+      try {
+        const { createClient } = await import('@/lib/supabase/client')
+        const { data: { session } } = await createClient().auth.getSession()
+        if (!session) { if (live) setReady(true); return }
+        const res = await fetch('/api/me/realtor', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          cache: 'no-store',
+        })
+        if (!res.ok) { if (live) setReady(true); return }
+        const d = await res.json()
+        if (!live) return
+        setProperties((d.properties ?? []) as any[])
+        setLeads((d.leads ?? []) as any[])
+        setStats((d.stats ?? EMPTY) as Stats)
+        const name = d.profile?.full_name || 'Realtor'
+        setDisplayName(name)
+        setFirstName(String(name).split(' ')[0] || 'there')
+        setReady(true)
+      } catch {
+        if (live) setReady(true)   // fail closed: zeros, never another agent's book
+      }
+    })()
+    return () => { live = false }
+  }, [])
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/auth/login')
+  if (!ready) {
+    return <div className="p-6"><div className="animate-pulse text-gray-500">Loading your dashboard…</div></div>
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile) {
-    redirect('/auth/login')
-  }
-
-  const displayName = profile.full_name || 'Realtor'
-  const firstName = profile.full_name?.split(' ')[0] || 'there'
-
-  // Get properties for this agent
-  const { data: properties } = await supabase
-    .from('properties')
-    .select('*')
-    .eq('agent_id', user.id)
-    .order('created_at', { ascending: false })
-
-  // Get leads for this agent
-  const { data: leads } = await supabase
-    .from('realtor_leads')
-    .select('*')
-    .eq('agent_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(10)
-
-  // Get customers for this agent
-  const { data: customers } = await supabase
-    .from('realtor_customers')
-    .select('*')
-    .eq('agent_id', user.id)
-
-  const activeListings = properties?.filter((p) => p.status === 'active').length || 0
-  const pendingListings = properties?.filter((p) => p.status === 'pending').length || 0
-  const soldListings = properties?.filter((p) => p.status === 'sold').length || 0
-  const totalListings = properties?.length || 0
-  
-  const newLeads = leads?.filter((l) => l.status === 'new').length || 0
-  const activeLeads = leads?.filter((l) => l.status === 'new' || l.status === 'contacted').length || 0
-  const totalCustomers = customers?.length || 0
+  const { activeListings, pendingListings, soldListings, totalListings, newLeads, activeLeads, totalCustomers } = stats
 
   // Calculate total volume
   const totalVolume = properties?.reduce((sum, p) => sum + (p.price || 0), 0) || 0

@@ -1,5 +1,13 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
+// 2026-08-20: was a SERVER component gating on a cookie-based getUser(), always
+// null, then a redirect() that renders blank. Nobody has ever seen this page.
+//
+// It reads EVERY profile, property and lead on the platform with no agent filter -
+// correct for an admin view, catastrophic for anyone else. The role check is
+// therefore the point of /api/admin/metrics rather than an afterthought, and it
+// is enforced server-side where the caller cannot change it. A non-admin now gets
+// a plain "restricted" message instead of another blank page.
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   Shield,
@@ -12,60 +20,61 @@ import {
   UserPlus,
 } from 'lucide-react';
 
-function getSupabase() {
-  var sb = require('@supabase/supabase-js')
-  var url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  var key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url || !key) return null
-  return sb.createClient(url, key, { auth: { persistSession: false } })
+
+
+interface Metrics {
+  totalUsers: number; activeAgents: number; totalProperties: number
+  activeListings: number; totalLeads: number; newLeads: number
 }
+const EMPTY: Metrics = { totalUsers:0, activeAgents:0, totalProperties:0, activeListings:0, totalLeads:0, newLeads:0 }
 
+export default function AdminDashboard() {
+  const [displayName, setDisplayName] = useState('Admin')
+  const [m, setM] = useState<Metrics>(EMPTY)
+  const [state, setState] = useState<'loading' | 'ready' | 'forbidden'>('loading')
 
-export default async function AdminDashboard() {
-  const supabase = await createClient()
+  useEffect(() => {
+    let live = true
+    ;(async () => {
+      try {
+        const { createClient } = await import('@/lib/supabase/client')
+        const { data: { session } } = await createClient().auth.getSession()
+        if (!session) { if (live) setState('forbidden'); return }
+        const res = await fetch('/api/admin/metrics', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          cache: 'no-store',
+        })
+        if (!res.ok) { if (live) setState('forbidden'); return }
+        const d = await res.json()
+        if (!live) return
+        setDisplayName(d.displayName ?? 'Admin')
+        setM((d.metrics ?? EMPTY) as Metrics)
+        setState('ready')
+      } catch {
+        if (live) setState('forbidden')   // fail closed
+      }
+    })()
+    return () => { live = false }
+  }, [])
 
-  // Get current user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/auth/login')
+  if (state === 'loading') {
+    return <div className="p-6"><div className="animate-pulse text-gray-500">Loading platform metrics…</div></div>
+  }
+  if (state === 'forbidden') {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-2">Admin</h1>
+        <p className="text-gray-500 text-sm">This page is restricted to administrators.</p>
+      </div>
+    )
   }
 
-  // Verify admin role
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, is_admin, first_name, last_name')
-    .eq('id', user.id)
-    .single()
-
-  // Check for admin role OR is_admin flag
-  if (!profile || (profile.role !== 'admin' && !profile.is_admin)) {
-    redirect('/dashboard/realtor')
-  }
-
-  const displayName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || 'Admin'
-
-  // Get platform metrics
-  const { data: allProfiles } = await supabase
-    .from('profiles')
-    .select('id, role, active')
-    
-  const { data: properties } = await supabase
-    .from('properties')
-    .select('id, status')
-  
-  const { data: leads } = await supabase
-    .from('realtor_leads')
-    .select('id, status')
-
-  const totalUsers = allProfiles?.length || 0
-  const activeAgents = allProfiles?.filter((p) => p.role === 'agent' && p.active).length || 0
-  const totalProperties = properties?.length || 0
-  const activeListings = properties?.filter((p) => p.status === 'active').length || 0
-  const totalLeads = leads?.length || 0
-  const newLeads = leads?.filter((l) => l.status === 'new').length || 0
+  const totalUsers = m.totalUsers
+  const activeAgents = m.activeAgents
+  const totalProperties = m.totalProperties
+  const activeListings = m.activeListings
+  const totalLeads = m.totalLeads
+  const newLeads = m.newLeads
 
   const metrics = [
     {
