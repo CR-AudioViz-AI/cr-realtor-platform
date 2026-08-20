@@ -1,56 +1,50 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
+// 2026-08-20: was a SERVER component gating on a cookie-based getUser(). Sessions
+// live in localStorage, so it returned null on every request and redirect()
+// renders a BLANK PAGE rather than a 307. This page has never shown an agent a
+// single row.
+//
+// Data comes from /api/me/pm/leases, behind requireUser(), where every query
+// filters on the VERIFIED caller's agent_id. Markup unchanged.
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { FileText, Plus, Calendar, DollarSign, CheckCircle, AlertTriangle } from 'lucide-react'
 
-function getSupabase() {
-  var sb = require('@supabase/supabase-js')
-  var url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  var key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url || !key) return null
-  return sb.createClient(url, key, { auth: { persistSession: false } })
-}
 
-export default async function LeasesListPage() {
-  const supabase = await createClient()
+export default function LeasesPage() {
+  const [leases, setLeases] = useState<any[]>([])
+  const [propertiesMap, setPropertiesMap] = useState<Record<string, any>>({})
+  const [tenantsMap, setTenantsMap] = useState<Record<string, any>>({})
+  const [ready, setReady] = useState(false)
 
-  const { data: { user } } = await supabase.auth.getUser()
+  useEffect(() => {
+    let live = true
+    ;(async () => {
+      try {
+        const { createClient } = await import('@/lib/supabase/client')
+        const { data: { session } } = await createClient().auth.getSession()
+        if (!session) { if (live) setReady(true); return }
+        const res = await fetch('/api/me/pm/leases', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          cache: 'no-store',
+        })
+        if (!res.ok) { if (live) setReady(true); return }
+        const d = await res.json()
+        if (!live) return
+        setLeases((d.items ?? []) as any[])
+        setPropertiesMap((d.properties ?? {}) as Record<string, any>)
+        setTenantsMap((d.tenants ?? {}) as Record<string, any>)
+        setReady(true)
+      } catch {
+        // Fail closed: an empty list, never another agent's records.
+        if (live) setReady(true)
+      }
+    })()
+    return () => { live = false }
+  }, [])
 
-  if (!user) {
-    redirect('/auth/login')
-  }
-
-  let leases: any[] = []
-  let tenantsMap: Record<string, any> = {}
-  let propertiesMap: Record<string, any> = {}
-
-  const { data: leasesData } = await supabase
-    .from('leases')
-    .select('*')
-    .eq('agent_id', user.id)
-    .order('created_at', { ascending: false })
-
-  leases = leasesData || []
-
-  if (leases.length > 0) {
-    const tenantIds = [...new Set(leases.map(l => l.tenant_id).filter(Boolean))]
-    const propertyIds = [...new Set(leases.map(l => l.property_id).filter(Boolean))]
-
-    if (tenantIds.length > 0) {
-      const { data: tenantsData } = await supabase
-        .from('tenants')
-        .select('id, full_name')
-        .in('id', tenantIds)
-      tenantsData?.forEach(t => { tenantsMap[t.id] = t })
-    }
-
-    if (propertyIds.length > 0) {
-      const { data: propertiesData } = await supabase
-        .from('properties')
-        .select('id, address')
-        .in('id', propertyIds)
-      propertiesData?.forEach(p => { propertiesMap[p.id] = p })
-    }
+  if (!ready) {
+    return <div className="p-6"><div className="animate-pulse text-gray-500">Loading…</div></div>
   }
 
   const activeLeases = leases.filter(l => l.status === 'active').length
