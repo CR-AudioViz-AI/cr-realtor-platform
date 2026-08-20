@@ -1,5 +1,5 @@
-import Link from 'next/link'
 'use client'
+import Link from 'next/link'
 // 2026-08-20: was a SERVER component gating itself with a cookie-based getUser().
 // Sessions live in localStorage, so it returned null on every request - for a
 // signed-in agent too - and redirect() in a page component renders a BLANK PAGE
