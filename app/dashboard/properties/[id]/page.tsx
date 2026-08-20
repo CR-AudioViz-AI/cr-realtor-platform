@@ -1,5 +1,14 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect, notFound } from 'next/navigation'
+'use client'
+// 2026-08-20: was a SERVER component gating on a cookie-based getUser(), always
+// null, then a redirect() that renders blank. No agent has ever opened a property
+// detail page.
+//
+// It also selected the property BY ID ALONE with no ownership check, so repairing
+// the auth would have let any signed-in agent read any property on the platform by
+// changing the id in the URL. /api/me/properties/[id] filters on agent_id as part
+// of the query, and returns 404 rather than 403 so the id cannot be used to probe
+// which listings exist.
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   ArrowLeft, Edit, MapPin, Bed, Bath, Square, Calendar, DollarSign,
@@ -7,13 +16,6 @@ import {
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
-function getSupabase() {
-  var sb = require('@supabase/supabase-js')
-  var url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  var key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url || !key) return null
-  return sb.createClient(url, key, { auth: { persistSession: false } })
-}
 
 // Dynamic imports for client components
 const PropertyMap = dynamic(() => import('@/components/PropertyMap'), { ssr: false })
@@ -23,26 +25,48 @@ const NearbySchools = dynamic(() => import('@/components/NearbySchools'), { ssr:
 const SocialShare = dynamic(() => import('@/components/SocialShare'), { ssr: false })
 const QRCodeGenerator = dynamic(() => import('@/components/QRCodeGenerator'), { ssr: false })
 
-export default async function PropertyDetailPage({ params }: { params: { id: string } }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) redirect('/auth/login')
+export default function PropertyDetailPage({ params }: { params: { id: string } }) {
+  const [property, setProperty] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
+  const [state, setState] = useState<'loading' | 'ready' | 'missing'>('loading')
 
-  const { data: property, error } = await supabase
-    .from('properties')
-    .select('*')
-    .eq('id', params.id)
-    .single()
+  useEffect(() => {
+    let live = true
+    ;(async () => {
+      try {
+        const { createClient } = await import('@/lib/supabase/client')
+        const { data: { session } } = await createClient().auth.getSession()
+        if (!session) { if (live) setState('missing'); return }
+        const res = await fetch(`/api/me/properties/${params.id}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          cache: 'no-store',
+        })
+        if (!res.ok) { if (live) setState('missing'); return }
+        const d = await res.json()
+        if (!live) return
+        setProperty(d.property)
+        setProfile(d.profile)
+        setState('ready')
+      } catch {
+        if (live) setState('missing')   // fail closed
+      }
+    })()
+    return () => { live = false }
+  }, [params.id])
 
-  if (error || !property) notFound()
-
-  // Get agent profile for sharing
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, phone')
-    .eq('id', user.id)
-    .single()
+  if (state === 'loading') {
+    return <div className="p-6"><div className="animate-pulse text-gray-500">Loading property…</div></div>
+  }
+  if (state === 'missing' || !property) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-2">Property not found</h1>
+        <p className="text-gray-500 text-sm">
+          It may have been removed, or it belongs to another agent.
+        </p>
+      </div>
+    )
+  }
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(price)
@@ -52,7 +76,7 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
     return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
   }
 
-  const propertyUrl = `https://realtor.craudiovizai.com/listing/${params.id}`
+  const propertyUrl = `https://javarikeys.com/listing/${params.id}`
   const shareTitle = property.title || property.address
   const shareDescription = `${property.bedrooms} bed, ${property.bathrooms} bath • ${property.sqft?.toLocaleString()} sqft in ${property.city}, ${property.state}`
 
