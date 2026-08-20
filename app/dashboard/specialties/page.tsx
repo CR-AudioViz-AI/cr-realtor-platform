@@ -15,10 +15,6 @@ import { useRouter } from 'next/navigation'
 import SpecialtySelector from '@/components/SpecialtySelector'
 
 
-export const metadata = {
-  title: 'My Specialties | CR Realtor Platform',
-  description: 'Choose your social impact specialties to receive targeted leads'
-}
 
 const AVAILABLE_SPECIALTIES = [
   { id: 'veterans', name: 'Veterans', description: 'VA loans, military families, base proximity', market: '$239M', icon: '🪖' },
