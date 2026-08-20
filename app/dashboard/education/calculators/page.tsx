@@ -1,25 +1,19 @@
+'use client'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+// 2026-08-20: was a SERVER component gating on a cookie-based getUser(). Sessions
+// live in localStorage, so it returned null every time and redirect() renders a
+// BLANK PAGE rather than a 307. This page never displayed anything.
+//
+// app/dashboard/layout.tsx already verifies access; the two entitlement flags come
+// from /api/me/entitlements, behind requireUser(). Markup unchanged.
+import { useEffect, useState } from 'react'
 import {
   Calculator, ExternalLink, Home, DollarSign, TrendingUp,
   RefreshCcw, Scale, CreditCard, ArrowRight, Lock, Zap,
   CheckCircle, BarChart3, PiggyBank
 } from 'lucide-react';
 
-function getSupabase() {
-  var sb = require('@supabase/supabase-js')
-  var url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  var key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url || !key) return null
-  return sb.createClient(url, key, { auth: { persistSession: false } })
-}
 
-
-export const metadata = {
-  title: 'Financial Calculators | CR Realtor Platform',
-  description: 'Mortgage calculators powered by CR AudioViz AI',
-}
 
 // Calculators available in the Mortgage Rate Monitor app
 const MORTGAGE_APP_CALCULATORS = [
@@ -77,22 +71,42 @@ const REALTOR_CALCULATORS = [
   },
 ]
 
-export default async function CalculatorsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) redirect('/auth/login')
+export default function CalculatorsPage() {
+  const [hasEducation, setHasEducation] = useState(false)
+  const [hasCRM, setHasCRM] = useState(false)
+  const [ready, setReady] = useState(false)
 
-  // Check user's add-on subscriptions
-  const { data: addons } = await supabase
-    .from('addon_subscriptions')
-    .select('addon_id')
-    .eq('user_id', user.id)
-    .eq('status', 'active')
+  useEffect(() => {
+    let live = true
+    ;(async () => {
+      try {
+        const { createClient } = await import('@/lib/supabase/client')
+        const { data: { session } } = await createClient().auth.getSession()
+        if (!session) { if (live) setReady(true); return }
+        const res = await fetch('/api/me/entitlements', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          cache: 'no-store',
+        })
+        if (!res.ok) { if (live) setReady(true); return }
+        const d = await res.json()
+        if (!live) return
+        setHasEducation(Boolean(d.entitlements?.education))
+        setHasCRM(Boolean(d.entitlements?.crm))
+        setReady(true)
+      } catch {
+        if (live) setReady(true)   // fail closed: both stay false
+      }
+    })()
+    return () => { live = false }
+  }, [])
 
-  const activeAddons = addons?.map(a => a.addon_id) || []
-  const hasEducation = activeAddons.includes('education') || activeAddons.includes('full-bundle')
-  const hasCRM = activeAddons.includes('crm') || activeAddons.includes('full-bundle')
+  if (!ready) {
+    return (
+      <div className="p-6 max-w-5xl mx-auto">
+        <div className="animate-pulse text-gray-500">Checking your access…</div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 max-w-5xl mx-auto">

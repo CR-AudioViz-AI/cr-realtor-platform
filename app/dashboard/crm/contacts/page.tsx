@@ -1,5 +1,14 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
+// 2026-08-20: was a SERVER component gating on a cookie-based getUser(). Sessions
+// live in localStorage, so it returned null every request and redirect() renders
+// a BLANK PAGE, not a 307. This page has never shown a single contact to anyone.
+//
+// Contacts now come from /api/crm/contacts, behind requireUser(), which enforces
+// the team scoping SERVER-SIDE - a non-admin sees only their organisation, and no
+// query parameter can widen that. The page filters and counts; it does not decide
+// what it is allowed to see.
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   Plus,
@@ -17,71 +26,59 @@ import {
   MoreHorizontal,
 } from 'lucide-react';
 
-function getSupabase() {
-  var sb = require('@supabase/supabase-js')
-  var url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  var key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url || !key) return null
-  return sb.createClient(url, key, { auth: { persistSession: false } })
-}
 
 
-export default async function ContactsPage({
-  searchParams,
-}: {
-  searchParams: { status?: string; tag?: string; type?: string }
-}) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+interface Contact { id: string; contact_type?: string; [k: string]: unknown }
 
-  if (!user) redirect('/auth/login')
+export default function ContactsPage() {
+  const searchParams = useSearchParams()
+  const [allContacts, setAllContacts] = useState<Contact[]>([])
+  const [ready, setReady] = useState(false)
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*, organizations(*)')
-    .eq('id', user.id)
-    .single()
+  const status = searchParams.get('status') ?? undefined
+  const type = searchParams.get('type') ?? undefined
 
-  if (!profile) redirect('/auth/login')
+  useEffect(() => {
+    let live = true
+    ;(async () => {
+      try {
+        const { createClient } = await import('@/lib/supabase/client')
+        const { data: { session } } = await createClient().auth.getSession()
+        if (!session) { if (live) setReady(true); return }
+        const qs = new URLSearchParams()
+        if (status) qs.set('status', status)
+        if (type) qs.set('type', type)
+        const res = await fetch(`/api/crm/contacts?${qs.toString()}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          cache: 'no-store',
+        })
+        if (!res.ok) { if (live) setReady(true); return }
+        const d = await res.json()
+        if (!live) return
+        setAllContacts((d.contacts ?? []) as Contact[])
+        setReady(true)
+      } catch {
+        // Fail closed: an empty list, never someone else's contacts.
+        if (live) setReady(true)
+      }
+    })()
+    return () => { live = false }
+  }, [status, type])
 
-  const isAdmin = profile.role === 'admin' || profile.is_admin
-
-  let teamMemberIds: string[] = [user.id]
-  if (profile.organization_id) {
-    const { data: team } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('organization_id', profile.organization_id)
-    if (team) teamMemberIds = team.map(m => m.id)
-  }
-
-  let contactsQuery = supabase
-    .from('contacts')
-    .select('*')
-    .order('updated_at', { ascending: false })
-
-  if (!isAdmin) {
-    contactsQuery = contactsQuery.in('agent_id', teamMemberIds)
-  }
-
-  if (searchParams.status && searchParams.status !== 'all') {
-    contactsQuery = contactsQuery.eq('status', searchParams.status)
-  }
-
-  if (searchParams.type && searchParams.type !== 'all') {
-    contactsQuery = contactsQuery.eq('contact_type', searchParams.type)
-  }
-
-  const { data: contacts } = await contactsQuery
-
-  const allContacts = contacts || []
-  
   const buyers = allContacts.filter(c => c.contact_type === 'buyer').length
   const sellers = allContacts.filter(c => c.contact_type === 'seller').length
   const investors = allContacts.filter(c => c.contact_type === 'investor').length
   const vendors = allContacts.filter(c => c.contact_type === 'vendor').length
 
-  const typeFilter = searchParams.type
+  if (!ready) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="animate-pulse text-gray-500">Loading your contacts…</div>
+      </div>
+    )
+  }
+
+  const typeFilter = type
 
   return (
     <div className="space-y-6">
