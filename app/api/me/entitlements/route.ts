@@ -45,7 +45,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     // maybeSingle, not single: "no active add-on" is the NORMAL case for most
     // agents, and single() treats it as an error - which is how an ordinary
     // free account starts looking like a failure.
-    const [{ data: addons }, { data: sub }] = await Promise.all([
+    // The dashboard pages also need the agent's own profile - role and chosen
+    // specialties - which they used to read server-side with a cookie client that
+    // could never see a session. One endpoint answers "who am I and what do I
+    // have", so a page needs one authenticated call rather than three.
+    const [{ data: addons }, { data: sub }, { data: profile }] = await Promise.all([
       supabase
         .from("addon_subscriptions")
         .select("addon_id")
@@ -56,6 +60,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         .select("id, plan, status")
         .eq("user_id", auth.userId)
         .eq("status", "active")
+        .maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("id, full_name, role, specialties")
+        .eq("id", auth.userId)
         .maybeSingle(),
     ]);
 
@@ -78,6 +87,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         // discount, not an error.
         hasRealtorAccount: Boolean(sub),
         discountPercent: sub ? 20 : 0,
+        profile: profile ?? null,
+        // Pages gate on this rather than re-querying. Absent profile means not a
+        // realtor - the safe answer, since role is what unlocks agent tooling.
+        isRealtor: (profile as { role?: string } | null)?.role === "realtor",
       },
       { headers: { "Cache-Control": "no-store" } },
     );

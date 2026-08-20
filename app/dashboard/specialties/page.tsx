@@ -1,17 +1,19 @@
 // app/dashboard/specialties/page.tsx
 // Agent Specialty Selection - Choose Your 20 Social Impact Niches
 
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
+// 2026-08-20: was a SERVER component gating itself with a cookie-based
+// getUser(). Sessions live in localStorage, so it returned null on every request
+// - for a signed-in agent too - and redirect() in a page component renders a
+// BLANK PAGE rather than issuing a 307. This page never displayed anything.
+//
+// app/dashboard/layout.tsx already verifies access client-side. Identity and the
+// agent's profile now come from /api/me/entitlements, which is behind
+// requireUser(). The markup below is unchanged.
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import SpecialtySelector from '@/components/SpecialtySelector'
 
-function getSupabase() {
-  var sb = require('@supabase/supabase-js')
-  var url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  var key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url || !key) return null
-  return sb.createClient(url, key, { auth: { persistSession: false } })
-}
 
 export const metadata = {
   title: 'My Specialties | CR Realtor Platform',
@@ -41,28 +43,53 @@ const AVAILABLE_SPECIALTIES = [
   { id: 'co_living', name: 'Co-Housing', description: 'Intentional communities, shared living', market: '$156M', icon: '🤝' }
 ]
 
-export default async function SpecialtiesPage() {
-  const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+interface MeProfile { id: string; role?: string; specialties?: string[] }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
+export default function SpecialtiesPage() {
+  const router = useRouter()
+  const [me, setMe] = useState<MeProfile | null>(null)
+  const [state, setState] = useState<'loading' | 'ready' | 'denied'>('loading')
 
-  // Redirect if no profile found
-  if (!profile) {
-    redirect('/dashboard')
+  useEffect(() => {
+    let live = true
+    ;(async () => {
+      try {
+        const { createClient } = await import('@/lib/supabase/client')
+        const { data: { session } } = await createClient().auth.getSession()
+        if (!session) { if (live) setState('denied'); return }
+        const res = await fetch('/api/me/entitlements', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          cache: 'no-store',
+        })
+        if (!res.ok) { if (live) setState('denied'); return }
+        const d = await res.json()
+        if (!live) return
+        // Specialty selection is realtor-only. Absent profile or wrong role is a
+        // denial, not an error - the same rule the server version enforced.
+        if (!d.isRealtor) { setState('denied'); return }
+        setMe(d.profile as MeProfile)
+        setState('ready')
+      } catch {
+        if (live) setState('denied')   // fail closed
+      }
+    })()
+    return () => { live = false }
+  }, [])
+
+  useEffect(() => {
+    if (state === 'denied') router.replace('/dashboard')
+  }, [state, router])
+
+  if (state !== 'ready' || !me) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-500">Loading your specialties…</div>
+      </div>
+    )
   }
-  
-  // Type assertion for profile with role
-  const profileData = profile as { role?: string; specialties?: string[] }
-  if (profileData.role !== 'realtor') {
-    redirect('/dashboard')
-  }
+
+  const profileData = { role: me.role, specialties: me.specialties }
+  const user = { id: me.id }
 
   return (
     <div className="min-h-screen bg-gray-50">
