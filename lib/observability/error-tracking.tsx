@@ -4,6 +4,16 @@
 // Created: Monday, December 30, 2025 | 2:56 PM EST
 // Phase 4: Sentry Error Tracking Integration
 // Free tier: 5K errors/month
+//
+// 2026-08-21: renamed from .ts to .tsx. It contains JSX - withErrorBoundary
+// returns a <Sentry.ErrorBoundary> - and TypeScript cannot parse JSX in a .ts
+// file, so this module produced 29 SYNTAX errors and had never compiled. It has
+// no importers, which is why nothing broke: Sentry error tracking on this
+// platform has never been wired up at all.
+//
+// Left in place rather than deleted because the integration is wanted; it now at
+// least parses, and the gap is visible instead of hidden behind a file nobody
+// could build.
 // =============================================================================
 
 'use client';

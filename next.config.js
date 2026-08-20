@@ -13,7 +13,16 @@ const nextConfig = {
       { source: "/harvey", destination: "/demo/premiere-plus", permanent: true },
     ]
   },
-  typescript: { ignoreBuildErrors: true },
+  typescript: {
+    // 2026-08-21: was ignoreBuildErrors: true. With checking off, this repo
+    // carried lib/observability/error-tracking.ts - a file containing JSX with a
+    // .ts extension, which cannot parse. 29 syntax errors, and it had NEVER
+    // compiled. Nothing imported it, so Sentry error tracking has never actually
+    // been wired up here and no one could tell.
+    //
+    // Type errors: 29 to 0. Do not turn this back off.
+    ignoreBuildErrors: false,
+  },
   eslint: { ignoreDuringBuilds: true },
   reactStrictMode: false,
   // Prevent any static generation - all pages dynamic
