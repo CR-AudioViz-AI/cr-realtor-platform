@@ -1,81 +1,67 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
+// 2026-08-20: was a SERVER component gating on a cookie-based getUser(). Sessions
+// live in localStorage, so it returned null on EVERY request - for a signed-in
+// agent too - and redirect() renders a BLANK PAGE rather than a 307. This
+// dashboard has never shown an agent a single number.
+//
+// app/dashboard/layout.tsx already verifies access. The figures come from
+// /api/me/property-management, behind requireUser(), where every query filters on
+// the VERIFIED caller's agent_id. Markup unchanged.
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   Building2, Users, FileText, Wrench, DollarSign, 
   AlertTriangle, Plus
 } from 'lucide-react';
 
-function getSupabase() {
-  var sb = require('@supabase/supabase-js')
-  var url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  var key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url || !key) return null
-  return sb.createClient(url, key, { auth: { persistSession: false } })
+
+
+interface Stats {
+  totalProperties: number; rentalProperties: number; activeTenants: number
+  activeLeases: number; openMaintenance: number; urgentMaintenance: number
+  monthlyIncome: number; expiringLeases: number
 }
 
+const EMPTY: Stats = {
+  totalProperties: 0, rentalProperties: 0, activeTenants: 0, activeLeases: 0,
+  openMaintenance: 0, urgentMaintenance: 0, monthlyIncome: 0, expiringLeases: 0,
+}
 
-export default async function PropertyManagementDashboard() {
-  const supabase = await createClient()
+export default function PropertyManagementDashboard() {
+  const [stats, setStats] = useState<Stats>(EMPTY)
+  const [ready, setReady] = useState(false)
 
-  const { data: { user } } = await supabase.auth.getUser()
+  useEffect(() => {
+    let live = true
+    ;(async () => {
+      try {
+        const { createClient } = await import('@/lib/supabase/client')
+        const { data: { session } } = await createClient().auth.getSession()
+        if (!session) { if (live) setReady(true); return }
+        const res = await fetch('/api/me/property-management', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          cache: 'no-store',
+        })
+        if (!res.ok) { if (live) setReady(true); return }
+        const d = await res.json()
+        if (!live) return
+        setStats((d.stats ?? EMPTY) as Stats)
+        setReady(true)
+      } catch {
+        // Fail closed: zeros, never another agent's portfolio.
+        if (live) setReady(true)
+      }
+    })()
+    return () => { live = false }
+  }, [])
 
-  if (!user) {
-    redirect('/auth/login')
+  if (!ready) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse text-gray-500">Loading your portfolio…</div>
+      </div>
+    )
   }
-
-  let stats = {
-    totalProperties: 0,
-    rentalProperties: 0,
-    activeTenants: 0,
-    activeLeases: 0,
-    openMaintenance: 0,
-    urgentMaintenance: 0,
-    monthlyIncome: 0,
-    expiringLeases: 0
-  }
-
-  // Get properties count
-  const { data: properties } = await supabase
-    .from('properties')
-    .select('id, listing_type')
-    .eq('agent_id', user.id)
-  
-  stats.totalProperties = properties?.length || 0
-  stats.rentalProperties = properties?.filter(p => ['for_rent', 'for_lease'].includes(p.listing_type)).length || 0
-
-  // Get tenants count
-  const { data: tenants } = await supabase
-    .from('tenants')
-    .select('id, status')
-    .eq('agent_id', user.id)
-  
-  stats.activeTenants = tenants?.filter(t => t.status === 'active').length || 0
-
-  // Get leases
-  const { data: leases } = await supabase
-    .from('leases')
-    .select('id, status, monthly_rent, end_date')
-    .eq('agent_id', user.id)
-  
-  stats.activeLeases = leases?.filter(l => l.status === 'active').length || 0
-  stats.monthlyIncome = leases?.filter(l => l.status === 'active').reduce((sum, l) => sum + (l.monthly_rent || 0), 0) || 0
-  
-  const thirtyDaysFromNow = new Date()
-  thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30)
-  stats.expiringLeases = leases?.filter(l => {
-    if (l.status !== 'active' || !l.end_date) return false
-    return new Date(l.end_date) <= thirtyDaysFromNow
-  }).length || 0
-
-  // Get maintenance requests
-  const { data: maintenance } = await supabase
-    .from('maintenance_requests')
-    .select('id, status, priority')
-    .eq('agent_id', user.id)
-  
-  stats.openMaintenance = maintenance?.filter(m => ['submitted', 'in_progress', 'scheduled'].includes(m.status)).length || 0
-  stats.urgentMaintenance = maintenance?.filter(m => m.priority === 'urgent' && m.status !== 'completed').length || 0
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount)
