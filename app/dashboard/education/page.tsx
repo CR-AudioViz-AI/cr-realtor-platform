@@ -1,6 +1,13 @@
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
+// 2026-08-20: was a SERVER component gating itself with a cookie-based getUser().
+// Sessions live in localStorage, so it returned null on every request - for a
+// signed-in agent too - and redirect() in a page component renders a BLANK PAGE
+// rather than a 307. This page never displayed anything.
+//
+// app/dashboard/layout.tsx already verifies access. Entitlements come from
+// /api/me/entitlements, behind requireUser(). Markup unchanged.
+import { useEffect, useState } from 'react'
 import {
   GraduationCap, BookOpen, Video, FileText, Calculator, DollarSign,
   Home, Shield, Users, Award, ChevronRight, PlayCircle, Download,
@@ -8,19 +15,7 @@ import {
   Lock, Zap, ExternalLink
 } from 'lucide-react';
 
-function getSupabase() {
-  var sb = require('@supabase/supabase-js')
-  var url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  var key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url || !key) return null
-  return sb.createClient(url, key, { auth: { persistSession: false } })
-}
 
-
-export const metadata = {
-  title: 'Education Center | CR Realtor Platform',
-  description: 'Premium real estate education for realtors and their clients.',
-}
 
 const LEARNING_TRACKS = [
   {
@@ -80,35 +75,46 @@ const QUICK_GUIDES = [
   { title: 'Home Inspection Checklist', icon: CheckCircle, time: '10 min' },
 ]
 
-export default async function EducationCenterPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) redirect('/auth/login')
+export default function EducationCenterPage() {
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null)
+  const [discountPercent, setDiscountPercent] = useState(0)
 
-  // Check if user has Education add-on
-  const { data: addon } = await supabase
-    .from('addon_subscriptions')
-    .select('*')
-    .eq('user_id', user.id)
-    .in('addon_id', ['education', 'full-bundle'])
-    .eq('status', 'active')
-    .single()
+  useEffect(() => {
+    let live = true
+    ;(async () => {
+      try {
+        const { createClient } = await import('@/lib/supabase/client')
+        const { data: { session } } = await createClient().auth.getSession()
+        if (!session) { if (live) setHasAccess(false); return }
+        const res = await fetch('/api/me/entitlements', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          cache: 'no-store',
+        })
+        if (!res.ok) { if (live) setHasAccess(false); return }
+        const d = await res.json()
+        if (!live) return
+        setHasAccess(Boolean(d.entitlements?.education))
+        setDiscountPercent(d.discountPercent ?? 0)
+      } catch {
+        if (live) setHasAccess(false)   // fail closed
+      }
+    })()
+    return () => { live = false }
+  }, [])
 
-  const hasAccess = !!addon
-
-  // Check if user has base realtor subscription for discount
-  const { data: realtorSub } = await supabase
-    .from('subscriptions')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .single()
-
-  const hasRealtorAccount = !!realtorSub
-  const discountPercent = hasRealtorAccount ? 20 : 0
+  const hasRealtorAccount = discountPercent > 0
   const basePrice = 49
   const finalPrice = Math.round(basePrice * (1 - discountPercent / 100))
+
+  // null means "not answered yet", distinct from false: showing the paywall while
+  // the answer is in flight would flash "buy this" at someone who owns it.
+  if (hasAccess === null) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="animate-pulse text-gray-500">Checking your access…</div>
+      </div>
+    )
+  }
 
   // If no access, show paywall
   if (!hasAccess) {

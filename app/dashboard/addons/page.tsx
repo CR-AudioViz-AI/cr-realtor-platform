@@ -1,25 +1,19 @@
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
+// 2026-08-20: was a SERVER component gating itself with a cookie-based getUser().
+// Sessions live in localStorage, so it returned null on every request and
+// redirect() renders a BLANK PAGE rather than a 307. This page never displayed.
+//
+// app/dashboard/layout.tsx already verifies access; the mortgage-plan discount
+// comes from /api/me/entitlements, behind requireUser(). Markup unchanged.
+import { useEffect, useState } from 'react'
 import {
   Package, Check, Zap, GraduationCap, Building2, Target, 
   Share2, Bot, CreditCard, ArrowRight, Star, Shield,
   Calculator, TrendingUp, Users, Sparkles, ExternalLink
 } from 'lucide-react';
 
-function getSupabase() {
-  var sb = require('@supabase/supabase-js')
-  var url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  var key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url || !key) return null
-  return sb.createClient(url, key, { auth: { persistSession: false } })
-}
 
-
-export const metadata = {
-  title: 'Add-Ons & Integrations | CR Realtor Platform',
-  description: 'Premium tools and integrations to enhance your real estate business',
-}
 
 const ADDONS = [
   {
@@ -141,21 +135,33 @@ const MORTGAGE_INTEGRATION = {
   link: 'https://mortgage.craudiovizai.com',
 }
 
-export default async function AddOnsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) redirect('/auth/login')
+export default function AddOnsPage() {
+  const [hasMortgageApp, setHasMortgageApp] = useState<boolean | null>(null)
 
-  // Check if user has mortgage app subscription
-  const { data: subscription } = await supabase
-    .from('subscriptions')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .single()
+  useEffect(() => {
+    let live = true
+    ;(async () => {
+      try {
+        const { createClient } = await import('@/lib/supabase/client')
+        const { data: { session } } = await createClient().auth.getSession()
+        if (!session) { if (live) setHasMortgageApp(false); return }
+        const res = await fetch('/api/me/entitlements', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          cache: 'no-store',
+        })
+        if (!res.ok) { if (live) setHasMortgageApp(false); return }
+        const d = await res.json()
+        if (live) setHasMortgageApp(Boolean(d.hasMortgageApp))
+      } catch {
+        if (live) setHasMortgageApp(false)   // fail closed: no discount
+      }
+    })()
+    return () => { live = false }
+  }, [])
 
-  const hasMortgageApp = subscription?.plan_id?.includes('mortgage')
+  // Undecided is treated as NO discount rather than showing a price that might
+  // drop a moment later - a price that changes under the reader is worse than a
+  // price that is simply full.
   const discountPercent = hasMortgageApp ? 20 : 0
 
   return (

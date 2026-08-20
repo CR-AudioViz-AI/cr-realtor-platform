@@ -57,7 +57,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         .eq("status", "active"),
       supabase
         .from("subscriptions")
-        .select("id, plan, status")
+        .select("id, plan, plan_id, status")
         .eq("user_id", auth.userId)
         .eq("status", "active")
         .maybeSingle(),
@@ -87,6 +87,13 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         // discount, not an error.
         hasRealtorAccount: Boolean(sub),
         discountPercent: sub ? 20 : 0,
+        // The add-ons page discounts specifically for a MORTGAGE plan, which is a
+        // different rule from the realtor discount above. Returned explicitly so
+        // the page does not have to re-query or guess from the plan name.
+        hasMortgageApp: Boolean(
+          (sub as { plan_id?: string; plan?: string } | null)?.plan_id?.includes("mortgage") ??
+          (sub as { plan?: string } | null)?.plan?.includes("mortgage"),
+        ),
         profile: profile ?? null,
         // Pages gate on this rather than re-querying. Absent profile means not a
         // realtor - the safe answer, since role is what unlocks agent tooling.
