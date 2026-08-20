@@ -1,5 +1,20 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
+// app/dashboard/vendors/page.tsx
+//
+// 2026-08-20: this was a SERVER component that gated itself with
+//   const { data: { user } } = await createClient().auth.getUser()
+//   if (!user) redirect('/auth/login')
+// Two faults stacked. lib/supabase/server.ts builds a COOKIE client and sessions
+// live in localStorage, so getUser() returned null on EVERY request - for a
+// signed-in agent too. And redirect() in a page component renders a blank page
+// rather than issuing a 307. This page was blank for everyone, always, and so
+// was the rest of the agent dashboard.
+//
+// Now a client component: app/dashboard/layout.tsx already verifies access and
+// renders nothing until authorised, and entitlements come from
+// /api/me/entitlements, which is behind requireUser and reads with the service
+// role. The paywall markup below is unchanged.
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   Building2, Lock, Zap, CheckCircle, Users, Shield, Star,
@@ -15,11 +30,6 @@ function getSupabase() {
   return sb.createClient(url, key, { auth: { persistSession: false } })
 }
 
-export const metadata = {
-  title: 'Vendor Network | CR Realtor Platform',
-  description: 'Connect with trusted real estate service providers',
-}
-
 const VENDOR_CATEGORIES = [
   'Mortgage Lenders',
   'Title Companies', 
@@ -33,35 +43,47 @@ const VENDOR_CATEGORIES = [
   'Home Stagers',
 ]
 
-export default async function VendorsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) redirect('/auth/login')
+export default function VendorsPage() {
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null)
+  const [discountPercent, setDiscountPercent] = useState(0)
 
-  // Check if user has Vendor add-on
-  const { data: addon } = await supabase
-    .from('addon_subscriptions')
-    .select('*')
-    .eq('user_id', user.id)
-    .in('addon_id', ['vendors', 'full-bundle'])
-    .eq('status', 'active')
-    .single()
+  useEffect(() => {
+    let live = true
+    ;(async () => {
+      try {
+        const { createClient } = await import('@/lib/supabase/client')
+        const { data: { session } } = await createClient().auth.getSession()
+        if (!session) { if (live) setHasAccess(false); return }
+        const res = await fetch('/api/me/entitlements', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          cache: 'no-store',
+        })
+        if (!res.ok) { if (live) setHasAccess(false); return }
+        const d = await res.json()
+        if (!live) return
+        setHasAccess(Boolean(d.entitlements?.vendors))
+        setDiscountPercent(d.discountPercent ?? 0)
+      } catch {
+        // Fail CLOSED: an entitlement that cannot be confirmed is not granted.
+        if (live) setHasAccess(false)
+      }
+    })()
+    return () => { live = false }
+  }, [])
 
-  const hasAccess = !!addon
-
-  // Check for realtor subscription discount
-  const { data: realtorSub } = await supabase
-    .from('subscriptions')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .single()
-
-  const hasRealtorAccount = !!realtorSub
-  const discountPercent = hasRealtorAccount ? 20 : 0
   const basePrice = 29
   const finalPrice = Math.round(basePrice * (1 - discountPercent / 100))
+  const hasRealtorAccount = discountPercent > 0
+
+  // Null means "not answered yet" - distinct from false. Showing the paywall
+  // while the answer is in flight would flash "buy this" at someone who owns it.
+  if (hasAccess === null) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="animate-pulse text-gray-500">Checking your access…</div>
+      </div>
+    )
+  }
 
   if (!hasAccess) {
     return (
