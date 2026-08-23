@@ -24,7 +24,13 @@ export async function GET(request: NextRequest) {
     }
     
     // Create admin client
-    const supabase = createClient(
+    // 2026-08-26: called createClient() with NO IMPORT - a plain ReferenceError,
+    // so this route crashed on the first line touching the database. Same class as
+    // the 15 undefined calls found across the core expenses module. The file
+    // already obtains the SDK via require inside getSupabase(); this call site was
+    // missed. Now uses the same runtime import.
+    const { createClient: _mk } = require('@supabase/supabase-js');
+    const supabase = _mk(
       (process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''),
       (process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''),
       { auth: { persistSession: false } }
