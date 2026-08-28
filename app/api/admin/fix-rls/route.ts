@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { secretKey, supabaseUrl } from "@craudioviz/platform-sdk";
 
 export const dynamic = 'force-dynamic'
 
 function getSupabase() {
   var sb = require('@supabase/supabase-js')
-  var url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  var key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  var url = supabaseUrl()
+  var key = secretKey()
   if (!url || !key) return null
   return sb.createClient(url, key, { auth: { persistSession: false } })
 }
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
     const adminKey = searchParams.get('key')
     
     // Verify admin access
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const serviceKey = secretKey()
     if (!adminKey || adminKey !== serviceKey?.slice(-10)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -31,8 +32,8 @@ export async function GET(request: NextRequest) {
     // missed. Now uses the same runtime import.
     const { createClient: _mk } = require('@supabase/supabase-js');
     const supabase = _mk(
-      (process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''),
-      (process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''),
+      (supabaseUrl()),
+      (secretKey()),
       { auth: { persistSession: false } }
     )
     

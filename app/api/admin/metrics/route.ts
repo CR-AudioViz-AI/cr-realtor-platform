@@ -13,14 +13,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireUser } from "@/lib/api/require-user";
+import { secretKey, supabaseUrl } from "@craudioviz/platform-sdk";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const runtime = "nodejs";
 
 function db() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = supabaseUrl();
+  const key = secretKey();
   if (!url || !key) throw new Error("Supabase is not configured");
   return createClient(url, key, {
     auth: { persistSession: false },

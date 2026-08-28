@@ -20,13 +20,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import { createClient } from "@supabase/supabase-js";
+import { secretKey, supabaseUrl } from "@craudioviz/platform-sdk";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 function db() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = supabaseUrl();
+  const key = secretKey();
   if (!url || !key) throw new Error("Supabase service role is not configured");
   return createClient(url, key, {
     auth: { persistSession: false },

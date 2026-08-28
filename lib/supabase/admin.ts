@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { secretKey, supabaseUrl } from "@craudioviz/platform-sdk";
 
 let adminClient: SupabaseClient | null = null
 
@@ -14,14 +15,14 @@ export function getAdminClient(): SupabaseClient {
     return adminClient
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const SUPABASE_URL = supabaseUrl()
+  const supabaseServiceKey = secretKey()
 
-  if (!supabaseUrl || !supabaseServiceKey) {
+  if (!SUPABASE_URL || !supabaseServiceKey) {
     throw new Error('Missing Supabase credentials. Ensure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set.')
   }
 
-  adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+  adminClient = createClient(SUPABASE_URL, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false
@@ -35,14 +36,14 @@ export function getAdminClient(): SupabaseClient {
  * Create a fresh admin client (for cases where you need a new instance)
  */
 export function createAdminClient(): SupabaseClient {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const SUPABASE_URL = supabaseUrl()
+  const supabaseServiceKey = secretKey()
 
-  if (!supabaseUrl || !supabaseServiceKey) {
+  if (!SUPABASE_URL || !supabaseServiceKey) {
     throw new Error('Missing Supabase credentials')
   }
 
-  return createClient(supabaseUrl, supabaseServiceKey, {
+  return createClient(SUPABASE_URL, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false

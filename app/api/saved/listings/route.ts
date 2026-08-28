@@ -19,14 +19,15 @@
 // CR AudioViz AI, LLC · EIN 39-3646201
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { secretKey, supabaseUrl } from "@craudioviz/platform-sdk";
 
 export const dynamic = 'force-dynamic'
 
 let _db: SupabaseClient | null = null
 function db(): SupabaseClient {
   if (_db) return _db
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const url = supabaseUrl()
+  const key = secretKey()
   if (!url || !key) throw new Error('Supabase is not configured')
   _db = createClient(url, key, { auth: { persistSession: false } })
   return _db

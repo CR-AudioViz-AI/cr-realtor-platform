@@ -11,11 +11,12 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { secretKey, supabaseUrl } from "@craudioviz/platform-sdk";
 
 // Initialize Supabase
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://kteobfyferrukqeolofj.supabase.co',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  supabaseUrl(),
+  secretKey()
 );
 
 // Resend API configuration

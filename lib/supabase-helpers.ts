@@ -7,6 +7,7 @@
 
 import { Database } from '@/types/database.complete'
 import { SupabaseClient, createClient } from '@supabase/supabase-js'
+import { secretKey, supabaseUrl } from "@craudioviz/platform-sdk";
 
 // Extract table types
 export type Tables = Database['public']['Tables']
@@ -35,14 +36,14 @@ export type Update<T extends TableName> = Tables[T] extends { Update: infer U }
  * SECURITY: Only use server-side, never expose to client
  */
 export function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const SUPABASE_URL = supabaseUrl()
+  const serviceRoleKey = secretKey()
 
-  if (!supabaseUrl || !serviceRoleKey) {
+  if (!SUPABASE_URL || !serviceRoleKey) {
     throw new Error('Missing Supabase environment variables for admin client')
   }
 
-  return createClient<Database>(supabaseUrl, serviceRoleKey, {
+  return createClient<Database>(SUPABASE_URL, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false

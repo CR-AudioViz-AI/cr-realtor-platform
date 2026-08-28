@@ -1,11 +1,12 @@
+import { secretKey, supabaseUrl } from "@craudioviz/platform-sdk";
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 // Central Supabase
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://kteobfyferrukqeolofj.supabase.co'
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+const SUPABASE_URL = supabaseUrl()
+const SUPABASE_SERVICE_KEY = secretKey()
 
 const supabase = SUPABASE_SERVICE_KEY 
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)

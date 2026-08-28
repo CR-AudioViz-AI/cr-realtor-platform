@@ -1,6 +1,10 @@
 // Build trigger: 1779135720
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // 2026-08-29: required for @craudioviz/platform-sdk. The SDK ships raw
+  // TypeScript and Next does not run node_modules through SWC by default, so
+  // any import carrying a `type` re-export fails the build without this.
+  transpilePackages: ["@craudioviz/platform-sdk"],
   // 2026-08-20: /harvey was `redirect('/demo/premiere-plus')` inside a page
   // component, which in Next returns HTTP 200 with a rendered shell - a BLANK
   // PAGE, not a redirect. Route aliases belong here, where they are a real 308 at

@@ -4,11 +4,12 @@
 import Link from 'next/link'
 import { Heart, Home, Users, Shield, CheckCircle, Smile, ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { secretKey, supabaseUrl } from "@craudioviz/platform-sdk";
 
 function getSupabase() {
   var sb = require('@supabase/supabase-js')
-  var url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  var key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  var url = supabaseUrl()
+  var key = secretKey()
   if (!url || !key) return null
   return sb.createClient(url, key, { auth: { persistSession: false } })
 }
