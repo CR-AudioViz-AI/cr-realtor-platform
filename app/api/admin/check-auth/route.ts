@@ -51,7 +51,9 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({
       success: true,
-      authUsers: authUsers?.users?.map(u => ({
+      // 2026-08-29: `u` was implicitly any and failed the build under noImplicitAny.
+      // Typed from what supabase-js actually returns from auth.admin.listUsers().
+      authUsers: authUsers?.users?.map((u: { id: string; email?: string; created_at?: string; last_sign_in_at?: string | null; app_metadata?: { provider?: string } }) => ({
         id: u.id,
         email: u.email,
         created_at: u.created_at,
