@@ -20,7 +20,12 @@ export async function sendEmail(data: {
     return { success: true, demo: true };
   }
   try {
-    const result = await resend.emails.send({
+    // 2026-08-29: was a bare `resend`, left behind when this moved to a lazy
+    // getter. ReferenceError on every send — and the guard above returns a
+    // success-shaped object when the key is unset, so nothing ever surfaced it.
+    const client = getResend();
+    if (!client) return { success: false, error: 'Resend is not configured' };
+    const result = await client.emails.send({
       from: data.from || `CR Realtor Platform <${FROM_EMAIL}>`,
       to: data.to,
       subject: data.subject,

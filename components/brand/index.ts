@@ -18,5 +18,7 @@ export { BrandedFooter } from './BrandedFooter';
 export { CreditsBar } from './CreditsBar';
 export { AuthButtons } from './AuthButtons';
 
-// Tailwind config extension
-export { brandConfig as tailwindBrandConfig } from './tailwind.brand.config';
+// 2026-08-29: re-exported `brandConfig` from './tailwind.brand.config', a file
+// that does not exist in this repo. brand-config.ts exports BRAND_COLORS,
+// THEME_CONFIG, TYPOGRAPHY, SPACING and LOGO_SPECS — never `brandConfig` — so
+// this export could never have resolved.

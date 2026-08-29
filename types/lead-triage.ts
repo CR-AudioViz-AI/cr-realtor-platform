@@ -93,7 +93,11 @@ export interface RecommendedAction {
   action: string;
   reason: string;
   priority: 'high' | 'medium' | 'low';
-  type: 'call' | 'email' | 'text' | 'showing' | 'follow_up' | 'nurture';
+  // 2026-08-29: 'schedule' added. It is produced by the triage data AND branched
+  // on in LeadTriageInbox (`action.type === 'schedule'` renders the Calendar
+  // icon), but was missing here — so that comparison had no overlap and the icon
+  // could never render.
+  type: 'call' | 'email' | 'text' | 'showing' | 'follow_up' | 'nurture' | 'schedule';
   suggested_message?: string;
   best_time?: string;
 }

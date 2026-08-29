@@ -191,11 +191,15 @@ export function usePWA() {
 }
 
 // Helper: Convert VAPID key
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+// 2026-08-29: return type widened to Uint8Array<ArrayBuffer>. Newer TS lib types
+// make plain Uint8Array generic over ArrayBufferLike, which includes
+// SharedArrayBuffer and therefore is not assignable to BufferSource where
+// pushManager.subscribe expects applicationServerKey.
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
   const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
+  const outputArray = new Uint8Array(new ArrayBuffer(rawData.length));
   for (let i = 0; i < rawData.length; ++i) {
     outputArray[i] = rawData.charCodeAt(i);
   }

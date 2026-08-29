@@ -185,7 +185,7 @@ export async function GET(request: NextRequest) {
         console.log(`Sending alert to ${customer.email}:`)
         console.log(`  Search: ${search.name}`)
         console.log(`  New listings: ${newListings.length}`)
-        console.log(`  Listings: ${newListings.map(l => l.address).join(', ')}`)
+        console.log(`  Listings: ${newListings.map((l: { address: string }) => l.address).join(', ')}`)
 
         // In production, you would call your email service here:
         // await sendEmail({

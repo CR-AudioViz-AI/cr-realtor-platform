@@ -751,7 +751,13 @@ export class PropertyDataOrchestrator {
     succeeded.push('google_places');
     const amenityData = data as Record<string, unknown[]>;
     
-    const mapAmenity = (a: Record<string, unknown>) => ({
+    // 2026-08-29: took Record<string, unknown>, but the arrays it maps over are
+    // unknown[] (amenityData is Record<string, unknown[]>), and unknown is not
+    // assignable to Record<string, unknown>. It takes unknown and narrows once,
+    // which is what the call sites actually hand it.
+    const mapAmenity = (raw: unknown) => {
+      const a = (raw ?? {}) as Record<string, unknown>;
+      return {
       name: String(a.name || ''),
       category: String(a.category || ''),
       distance_miles: Number(a.distance) || 0,
@@ -759,7 +765,8 @@ export class PropertyDataOrchestrator {
       review_count: a.reviews ? Number(a.reviews) : undefined,
       address: a.address ? String(a.address) : undefined,
       price_level: a.price ? String(a.price) : undefined,
-    });
+      };
+    };
     
     return {
       restaurants: wrapWithTrust(

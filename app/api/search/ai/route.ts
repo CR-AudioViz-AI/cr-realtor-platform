@@ -84,7 +84,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const completion = await openai.chat.completions.create({
+    // 2026-08-29: was a bare `openai`, left behind when this moved to a lazy
+    // getter. ReferenceError on every AI search.
+    const completion = await getOpenai().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },

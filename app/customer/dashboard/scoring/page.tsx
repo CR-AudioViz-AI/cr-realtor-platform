@@ -13,6 +13,10 @@ import {
 
 
 export default function ScoringDashboard() {
+  // 2026-08-29: this component called `supabase.*` without ever creating
+  // one — createClient was imported and never invoked. ReferenceError on
+  // mount, so the dashboard never loaded any data.
+  const supabase = createClient();
   const [preferences, setPreferences] = useState<ScoringPreferences | null>(null);
   const [properties, setProperties] = useState<PropertyWithScore[]>([]);
   const [loading, setLoading] = useState(true);

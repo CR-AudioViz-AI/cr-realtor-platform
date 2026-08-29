@@ -17,7 +17,7 @@ function getSupabase() {
 // GET - Retrieve user's scoring preferences
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
 // POST - Save/Update user's scoring preferences
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
 // PUT - Apply a preset to user's preferences
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -221,7 +221,7 @@ export async function PUT(request: NextRequest) {
 // DELETE - Reset to defaults
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     
     const { data: { user } } = await supabase.auth.getUser();
     

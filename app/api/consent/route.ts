@@ -277,6 +277,12 @@ async function logConsentEvent(
   reason?: string
 ) {
   try {
+    // 2026-08-29: referenced a bare `supabase` that does not exist in this
+    // scope — the route handlers each build their own via getSupabase(). This
+    // helper never had one, so every audit-log write threw ReferenceError at
+    // runtime and the consent audit trail was silently empty.
+    const supabase = getSupabase();
+    if (!supabase) return;
     await supabase.from('audit_logs').insert({
       entity_type: 'consent',
       entity_id: `${userId}_${agentId}`,

@@ -28,7 +28,24 @@ import {
 
 
 
-interface Contact { id: string; contact_type?: string; [k: string]: unknown }
+// 2026-08-29: was `{ id: string; contact_type?: string; [k: string]: unknown }`.
+// The index signature typed EVERY other field as `unknown`, so every read in the
+// JSX below was an error — 20 of them: `unknown` is not a ReactNode, `{}` has no
+// .length or .slice, and a `{}` cannot index or construct a Date. The fields are
+// declared explicitly instead; these are exactly the ones this page reads.
+interface Contact {
+  id: string
+  contact_type?: string
+  first_name?: string | null
+  last_name?: string | null
+  email?: string | null
+  phone?: string | null
+  city?: string | null
+  state?: string | null
+  is_favorite?: boolean | null
+  tags?: string[] | null
+  last_contact_date?: string | null
+}
 
 export default function ContactsPage() {
   const searchParams = useSearchParams()

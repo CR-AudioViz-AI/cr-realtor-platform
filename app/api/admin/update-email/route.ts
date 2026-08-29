@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     // Find user by old email if no userId provided
     if (!targetUserId && oldEmail) {
       const { data: users } = await supabaseAdmin.auth.admin.listUsers()
-      const user = users?.users?.find(u => u.email === oldEmail)
+      const user = users?.users?.find((u: { email?: string }) => u.email === oldEmail)
       if (!user) {
         return NextResponse.json({ error: `User not found: ${oldEmail}` }, { status: 404 })
       }

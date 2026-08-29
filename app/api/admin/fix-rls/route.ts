@@ -61,7 +61,11 @@ export async function GET(request: NextRequest) {
       results.push(`Profiles error: ${profilesError.message}`)
     } else {
       results.push(`Realtor profiles: ${profiles?.length || 0} found`)
-      profiles?.forEach(p => results.push(`  - ${p.full_name}: ${p.email}`))
+      // 2026-08-29: the callback parameters were implicitly any, which this repo
+      // rejects (strict + noImplicitAny). PostgREST returns untyped rows here, so
+      // the shape is stated at the call site rather than inferred.
+      profiles?.forEach((p: { full_name: string | null; email: string | null }) =>
+        results.push(`  - ${p.full_name}: ${p.email}`))
     }
     
     // Test knowledge base
@@ -85,7 +89,8 @@ export async function GET(request: NextRequest) {
       results.push(`Market data error: ${marketError.message}`)
     } else {
       results.push(`Market data: ${market?.length || 0} entries`)
-      market?.forEach(m => results.push(`  - ${m.metric_type}: ${m.value}%`))
+      market?.forEach((m: { metric_type: string | null; value: number | null }) =>
+        results.push(`  - ${m.metric_type}: ${m.value}%`))
     }
     
     return NextResponse.json({

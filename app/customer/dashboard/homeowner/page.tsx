@@ -17,6 +17,10 @@ interface DashboardStats {
 }
 
 export default function HomeownerDashboard() {
+  // 2026-08-29: this component called `supabase.*` without ever creating
+  // one — createClient was imported and never invoked. ReferenceError on
+  // mount, so the dashboard never loaded any data.
+  const supabase = createClient();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [upcomingReminders, setUpcomingReminders] = useState<any[]>([]);
