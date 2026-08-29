@@ -3,6 +3,19 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+/**
+ * This deployment's own origin, from the environment — never from the request.
+ * See the call site below for why requestUrl.origin cannot be trusted here.
+ */
+function selfOrigin(): string {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL
+  if (explicit) return explicit.replace(/\/+$/, '')
+  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL
+  if (vercel) return `https://${vercel}`
+  return `http://127.0.0.1:${process.env.PORT || 3000}`
+}
+
+
 function getSupabase() {
   var sb = require('@supabase/supabase-js')
   var url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -28,7 +41,12 @@ export async function GET(request: NextRequest) {
     if (!error && data.user) {
       // Log OAuth login to central activity system
       try {
-        await fetch(`${origin}/api/activity`, {
+        // NOT `origin`, which is requestUrl.origin and therefore built from
+        // the caller's Host header. An OAuth callback runs with a freshly
+        // exchanged session in hand, so `Host: attacker.example` would post
+        // this user's id and login event to the attacker. The deployment's own
+        // identity comes from the environment instead.
+        await fetch(`${selfOrigin()}/api/activity`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

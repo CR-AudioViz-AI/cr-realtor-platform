@@ -246,6 +246,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Number.isFinite BEFORE the range comparison, because the range check
+    // alone does not reject a non-number.
+    //
+    // `body` is JSON. Its TypeScript type is a compile-time claim, not a
+    // runtime guarantee, so lat can arrive as a string or an object. Every
+    // comparison against a non-numeric value yields NaN, and every comparison
+    // WITH NaN is false — so `lat < -90 || lat > 90` waves it straight through.
+    // Downstream it reaches the EPA URLs as `${lat - radiusDegrees}`, which is
+    // arithmetic, so nothing injectable survives — that is why CodeQL's three
+    // js/request-forgery findings in lib/apis/epa-environment.ts are false
+    // positives and are being dismissed rather than papered over with
+    // encodeURIComponent on a number.
+    //
+    // What DOES survive is the string "NaN" in the URL, so the request goes to
+    // EPA malformed and comes back useless, and the caller is told nothing.
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return NextResponse.json(
+        { success: false, error: 'Latitude and longitude must be numbers' },
+        { status: 400 }
+      )
+    }
+
     if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
       return NextResponse.json(
         { success: false, error: 'Invalid coordinates' },
