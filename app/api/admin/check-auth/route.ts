@@ -25,6 +25,12 @@ export async function GET(request: NextRequest) {
     const auth = request.headers.get('authorization') ?? ''
     const presented = auth.startsWith('Bearer ') ? auth.slice(7) : ''
     
+    // 2026-08-30: serviceKey is still declared — it is used below to build the
+    // admin client. My first edit deleted the line that declared it along with the
+    // insecure comparison that used it, and the build caught that immediately.
+    // Removing a bad USE of a variable is not the same as removing the variable.
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
+
     const expected = process.env.ADMIN_SECRET ?? ''
     // No fallback literal. A `?? "some-default"` on an admin gate is an open door
     // wearing a lock, and that exact pattern was removed from core on 2026-08-28.
