@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       .eq('user_id', user.id)
       .gte('date', startOfYear);
 
-    const expensesYTD = expenses?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+    const expensesYTD = expenses?.reduce((sum: number, e: { amount?: number }) => sum + (e.amount || 0), 0) || 0;
 
     // Get warranty counts
     const now = new Date().toISOString();
