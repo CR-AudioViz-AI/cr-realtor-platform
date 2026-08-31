@@ -51,6 +51,10 @@ interface Contact {
   tags?: string[]
   status?: string
   created_at?: string
+  city?: string
+  is_favorite?: boolean
+  last_contact_date?: string
+  state?: string
   [k: string]: unknown
 }
 
