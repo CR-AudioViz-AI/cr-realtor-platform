@@ -8,10 +8,6 @@ export const revalidate = 0
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-// 2026-08-30: this file used `supabase` with NO import of any client at all —
-// not a missing declaration, a missing dependency. Matching the pattern every
-// other API route in this repo uses: createClient from '@/lib/supabase/server'.
-import { createClient } from '@/lib/supabase/server';
 import { 
 
   ConsentRequest, 
@@ -49,9 +45,6 @@ function getConsentText(scopes: ConsentScope[]): string {
 
 // POST - Grant or update consent
 export async function POST(request: NextRequest) {
-  // Per-request, and AWAITED: createClient in '@/lib/supabase/server' returns a
-  // Promise. A module-scope client would also need a live credential at build time.
-  const supabase = await createClient();
   const supabase = getSupabase()!
   try {
     const body: ConsentRequest = await request.json();
@@ -155,9 +148,6 @@ export async function POST(request: NextRequest) {
 
 // GET - Check consent status
 export async function GET(request: NextRequest) {
-  // Per-request, and AWAITED: createClient in '@/lib/supabase/server' returns a
-  // Promise. A module-scope client would also need a live credential at build time.
-  const supabase = await createClient();
   const supabase = getSupabase()!
   try {
     const { searchParams } = new URL(request.url);
@@ -224,9 +214,6 @@ export async function GET(request: NextRequest) {
 
 // DELETE - Withdraw consent
 export async function DELETE(request: NextRequest) {
-  // Per-request, and AWAITED: createClient in '@/lib/supabase/server' returns a
-  // Promise. A module-scope client would also need a live credential at build time.
-  const supabase = await createClient();
   const supabase = getSupabase()!
   try {
     const body: WithdrawConsentRequest = await request.json();
