@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       results.push(`Profiles error: ${profilesError.message}`)
     } else {
       results.push(`✅ Profiles accessible: ${profiles?.length || 0} realtors`)
-      profiles?.forEach(p => results.push(`  - ${p.full_name}: ${p.email}`))
+      profiles?.forEach((p: { full_name?: string; email?: string }) => results.push(`  - ${p.full_name}: ${p.email}`))
     }
     
     // Try knowledge base
