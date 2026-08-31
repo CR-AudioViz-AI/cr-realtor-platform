@@ -28,7 +28,31 @@ import {
 
 
 
-interface Contact { id: string; contact_type?: string; [k: string]: unknown }
+// 2026-08-30: SEVENTEEN of this file's errors were this one interface.
+//
+// It declared only id and contact_type, with `[k: string]: unknown` for everything
+// else. That index signature is why the page failed to compile: every field it
+// actually renders — first_name, last_name, email, company — resolved to `unknown`,
+// and React cannot render unknown. `tags.length` and `tags.slice` failed the same
+// way against `{}`.
+//
+// So the contacts page has been rendering blanks where names and emails belong.
+//
+// Fields below are the ones this page reads, taken from the JSX rather than guessed.
+// The index signature stays for anything else the row carries.
+interface Contact {
+  id: string
+  contact_type?: string
+  first_name?: string
+  last_name?: string
+  email?: string
+  phone?: string
+  company?: string
+  tags?: string[]
+  status?: string
+  created_at?: string
+  [k: string]: unknown
+}
 
 export default function ContactsPage() {
   const searchParams = useSearchParams()
