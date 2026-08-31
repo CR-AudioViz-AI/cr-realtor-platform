@@ -751,7 +751,11 @@ export class PropertyDataOrchestrator {
     succeeded.push('google_places');
     const amenityData = data as Record<string, unknown[]>;
     
-    const mapAmenity = (a: Record<string, unknown>) => ({
+    // 2026-08-30: parameter widened to `unknown`. amenityData.* is unknown[], and
+// Array.prototype.map passes (value: unknown), so a Record<string, unknown>
+// parameter is narrower than the callback signature allows — five call sites
+// failed with TS2345. The body already treats fields as optional.
+const mapAmenity = (a: unknown) => ({
       name: String(a.name || ''),
       category: String(a.category || ''),
       distance_miles: Number(a.distance) || 0,
