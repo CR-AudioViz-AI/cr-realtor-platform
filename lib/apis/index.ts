@@ -28,7 +28,10 @@ export async function fetchAllPropertyIntelligence(location: PropertyLocation) {
   const { lat, lng, address, fipsCode } = location
 
   const results = await Promise.allSettled([
-    import('./fema-flood').then((m) => m.getFloodRisk(lat, lng)),
+    // 2026-08-30: getFloodZone, not getFloodRisk. fema-flood exports getFloodZone and
+    // requiresFloodInsurance — getFloodRisk has never existed, so this call threw at
+    // runtime and flood data has never loaded for any property.
+    import('./fema-flood').then((m) => m.getFloodZone(lat, lng)),
     fipsCode
       ? import('./fema-disasters').then((m) => m.getDisasterHistory(fipsCode))
       : Promise.resolve(null),
