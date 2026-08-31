@@ -172,7 +172,10 @@ export function usePWA() {
     try {
       const subscription = await state.registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        // 2026-08-30: .buffer, because PushSubscriptionOptions wants a BufferSource and
+        // TypeScript 5.7 made Uint8Array generic over its ArrayBufferLike, so the bare
+        // array no longer satisfies it.
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey).buffer as ArrayBuffer,
       });
       return subscription;
     } catch (error) {
