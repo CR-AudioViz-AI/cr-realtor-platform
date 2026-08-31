@@ -93,7 +93,12 @@ export interface RecommendedAction {
   action: string;
   reason: string;
   priority: 'high' | 'medium' | 'low';
-  type: 'call' | 'email' | 'text' | 'showing' | 'follow_up' | 'nurture';
+  // 2026-08-30: 'schedule' added. LeadTriageInbox sets type: 'schedule' on a
+  // recommended action and renders a Calendar icon for it, but the union never
+  // included it — so that icon branch was dead code TypeScript correctly called
+  // unreachable. Scheduling a CMA presentation is a real lead action and the UI was
+  // written for it, so the union is wrong, not the component.
+  type: 'call' | 'email' | 'text' | 'showing' | 'follow_up' | 'nurture' | 'schedule';
   suggested_message?: string;
   best_time?: string;
 }
