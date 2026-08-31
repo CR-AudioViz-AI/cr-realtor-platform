@@ -20,7 +20,14 @@ export async function sendEmail(data: {
     return { success: true, demo: true };
   }
   try {
-    const result = await getResend().emails.send({
+    // 2026-08-30: getResend() returns null when RESEND_API_KEY is absent — by design,
+    // so a missing key does not construct a client at module scope. That means it has
+    // to be checked, not asserted.
+    const resend = getResend();
+    if (!resend) {
+      return { success: false, error: 'Email is not configured (RESEND_API_KEY missing).' };
+    }
+    const result = await resend.emails.send({
       from: data.from || `CR Realtor Platform <${FROM_EMAIL}>`,
       to: data.to,
       subject: data.subject,
