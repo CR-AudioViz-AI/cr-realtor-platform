@@ -20,7 +20,7 @@ export async function sendEmail(data: {
     return { success: true, demo: true };
   }
   try {
-    const result = await resend.emails.send({
+    const result = await getResend().emails.send({
       from: data.from || `CR Realtor Platform <${FROM_EMAIL}>`,
       to: data.to,
       subject: data.subject,
