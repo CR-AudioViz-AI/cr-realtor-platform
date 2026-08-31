@@ -278,6 +278,13 @@ async function logConsentEvent(
   reason?: string
 ) {
   try {
+    // 2026-08-30: this helper lives OUTSIDE every handler and used `supabase` from a
+    // scope it cannot see. TS2304 'Cannot find name supabase' — meaning the consent
+    // AUDIT TRAIL has never written a single row. On a consent endpoint, that is the
+    // part regulators ask about.
+    //
+    // Uses the file's own getSupabase() factory, the same one every handler here uses.
+    const supabase = getSupabase()!
     await supabase.from('audit_logs').insert({
       entity_type: 'consent',
       entity_id: `${userId}_${agentId}`,
