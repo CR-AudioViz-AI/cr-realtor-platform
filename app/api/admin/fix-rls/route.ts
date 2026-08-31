@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       results.push(`Profiles error: ${profilesError.message}`)
     } else {
       results.push(`Realtor profiles: ${profiles?.length || 0} found`)
-      profiles?.forEach(p => results.push(`  - ${p.full_name}: ${p.email}`))
+      profiles?.forEach((p: { full_name?: string; email?: string }) => results.push(`  - ${p.full_name}: ${p.email}`))
     }
     
     // Test knowledge base
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
       results.push(`Market data error: ${marketError.message}`)
     } else {
       results.push(`Market data: ${market?.length || 0} entries`)
-      market?.forEach(m => results.push(`  - ${m.metric_type}: ${m.value}%`))
+      market?.forEach((m: { metric_type?: string; value?: number }) => results.push(`  - ${m.metric_type}: ${m.value}%`))
     }
     
     return NextResponse.json({
