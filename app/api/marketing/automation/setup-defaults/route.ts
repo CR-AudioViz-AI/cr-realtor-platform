@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     if (tError) throw tError;
 
     // Create default rules linked to templates
-    const templateMap = templates?.reduce((m, t) => ({ ...m, [t.type]: t.id }), {}) || {};
+    const templateMap = templates?.reduce((m: Record<string, string>, t: { type: string; id: string }) => ({ ...m, [t.type]: t.id }), {} as Record<string, string>) || {};
     
     const rulesWithAgent = DEFAULT_RULES.map(r => ({
       ...r,
