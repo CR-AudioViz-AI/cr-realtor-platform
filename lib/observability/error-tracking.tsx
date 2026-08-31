@@ -195,9 +195,18 @@ export const setErrorUser = (user: { id: string; email?: string; name?: string }
   errorTracking.setUser(user);
 
 // Error boundary helper
+// 2026-08-30: fallback narrowed from ReactNode to ReactElement.
+//
+// Sentry.ErrorBoundary's fallback accepts ReactElement | FallbackRender, not the
+// whole of ReactNode — ReactNode includes string, number, bigint and Iterable, none
+// of which it can render as a boundary fallback.
+//
+// Narrowing the parameter rather than casting at the call site: the constraint is
+// real, and a caller passing a bare string here should be told at their call site,
+// not have it silently accepted and fail inside Sentry.
 export function withErrorBoundary<P extends object>(
   Component: React.ComponentType<P>,
-  fallback?: React.ReactNode
+  fallback?: React.ReactElement
 ) {
   return function WrappedComponent(props: P) {
     return (
