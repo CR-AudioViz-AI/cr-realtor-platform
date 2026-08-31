@@ -334,7 +334,6 @@ export class PropertyDataOrchestrator {
 
       // Cache results
       this.cache.set(cacheKey, { data: intelligence, timestamp: Date.now() });
-  };
 
       return {
         success: true,
@@ -752,14 +751,13 @@ export class PropertyDataOrchestrator {
     succeeded.push('google_places');
     const amenityData = data as Record<string, unknown[]>;
     
-    // 2026-08-30: parameter widened to `unknown`. amenityData.* is unknown[], and
-// Array.prototype.map passes (value: unknown), so a Record<string, unknown>
-// parameter is narrower than the callback signature allows — five call sites
-// failed with TS2345. The body already treats fields as optional.
-const mapAmenity = (value: unknown) => {
-    // 2026-08-30: narrowed INSIDE the callback rather than in the signature. The
-    // parameter must be `unknown` to satisfy Array.map, but the body reads fields —
-    // so widening the signature alone just moved the error from TS2345 to TS18046.
+    // 2026-08-30: `value: unknown` on the boundary, narrowed on the next line.
+  //
+  // amenityData.* is unknown[], so Array.map passes `unknown`. A Record parameter is
+  // NARROWER than the callback signature permits, which is what TS2345 refused. But
+  // widening alone produces TS18046 on every field read, so the cast has to happen
+  // inside — not in the signature.
+  const mapAmenity = (value: unknown) => {
     const a = (value ?? {}) as Record<string, unknown>;
     return ({
       name: String(a.name || ''),
@@ -770,6 +768,7 @@ const mapAmenity = (value: unknown) => {
       address: a.address ? String(a.address) : undefined,
       price_level: a.price ? String(a.price) : undefined,
     });
+  };
     
     return {
       restaurants: wrapWithTrust(
