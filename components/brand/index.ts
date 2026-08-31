@@ -18,5 +18,7 @@ export { BrandedFooter } from './BrandedFooter';
 export { CreditsBar } from './CreditsBar';
 export { AuthButtons } from './AuthButtons';
 
-// Tailwind config extension
-export { brandConfig as tailwindBrandConfig } from './tailwind.brand.config';
+// 2026-08-30: REMOVED. './tailwind.brand.config' does not exist in this repo, so this
+// barrel re-exported a module that was never there — every importer of
+// components/brand failed to resolve. Deleting the export rather than inventing the
+// file: nothing in the repo imports tailwindBrandConfig.
