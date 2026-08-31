@@ -6,6 +6,14 @@ import React, { useState, useEffect } from 'react';
 import { ScoringMatrix } from '@/components/ScoringMatrix';
 import { PropertyComparison } from '@/components/PropertyComparison';
 import { 
+
+// 2026-08-30: `supabase` was NEVER DECLARED in this file. createClient is
+// imported and was called by nothing, so every database statement referenced a
+// bare `supabase` that does not exist and threw ReferenceError at runtime.
+//
+// Same defect as /api/auth in core and three routes in javari-admin. It survived
+// here because next build stops at the FIRST error, so nobody ever saw past it.
+const supabase = createClient();
   ScoringPreferences, 
   PropertyWithScore, 
   DEFAULT_SCORING_FACTORS 
