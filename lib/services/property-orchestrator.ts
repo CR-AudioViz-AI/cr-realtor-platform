@@ -334,6 +334,7 @@ export class PropertyDataOrchestrator {
 
       // Cache results
       this.cache.set(cacheKey, { data: intelligence, timestamp: Date.now() });
+  };
 
       return {
         success: true,
@@ -755,7 +756,12 @@ export class PropertyDataOrchestrator {
 // Array.prototype.map passes (value: unknown), so a Record<string, unknown>
 // parameter is narrower than the callback signature allows — five call sites
 // failed with TS2345. The body already treats fields as optional.
-const mapAmenity = (a: unknown) => ({
+const mapAmenity = (value: unknown) => {
+    // 2026-08-30: narrowed INSIDE the callback rather than in the signature. The
+    // parameter must be `unknown` to satisfy Array.map, but the body reads fields —
+    // so widening the signature alone just moved the error from TS2345 to TS18046.
+    const a = (value ?? {}) as Record<string, unknown>;
+    return ({
       name: String(a.name || ''),
       category: String(a.category || ''),
       distance_miles: Number(a.distance) || 0,
