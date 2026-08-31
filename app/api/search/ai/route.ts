@@ -84,6 +84,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 2026-08-30: `openai` was never created. OpenAI is imported as a class and no
+    // instance was ever made, so this route threw ReferenceError on every call — AI
+    // search in this app has never run.
+    //
+    // Constructed HERE, not at module scope: a client built at import time needs a
+    // live credential during `next build`, which is the same defect behind the seven
+    // 'supabaseUrl is required' build failures across the fleet.
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
