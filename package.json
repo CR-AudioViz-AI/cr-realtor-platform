@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@craudioviz/platform-sdk": "git+https://github.com/CR-AudioViz-AI/platform-sdk.git",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-progress": "^1.1.2",
     "@radix-ui/react-slot": "^1.1.2",
