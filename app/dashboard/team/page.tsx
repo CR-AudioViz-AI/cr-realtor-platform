@@ -25,8 +25,8 @@ const ROLES = {
 };
 
 const DEMO_MEMBERS: TeamMember[] = [
-  { id: '1', email: 'tony@premiere-plus.cr-realtor.com', full_name: 'Tony Harvey', role: 'owner', status: 'active', commission_split: 80, joined_at: '2024-01-01', stats: { active_listings: 4, closed_ytd: 12, volume_ytd: 4500000 } },
-  { id: '2', email: 'laura@premiere-plus.cr-realtor.com', full_name: 'Laura Harvey', role: 'agent', status: 'active', commission_split: 70, joined_at: '2024-01-01', stats: { active_listings: 4, closed_ytd: 8, volume_ytd: 2800000 } },
+  { id: '1', email: 'agent@example.com', full_name: 'Lead Agent', role: 'owner', status: 'active', commission_split: 80, joined_at: '2024-01-01', stats: { active_listings: 4, closed_ytd: 12, volume_ytd: 4500000 } },
+  { id: '2', email: 'agent2@example.com', full_name: 'Agent', role: 'agent', status: 'active', commission_split: 70, joined_at: '2024-01-01', stats: { active_listings: 4, closed_ytd: 8, volume_ytd: 2800000 } },
 ];
 
 export default function TeamManagementPage() {
