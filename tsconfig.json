@@ -1,4 +1,19 @@
 {
+  // 2026-09-01: DELIBERATELY NOT extending the SDK base.
+  //
+  // My converter reported "Expecting proper" on this file and skipped it. That was my
+  // JSON parser choking on these comments, not a malformed config — tsconfig allows
+  // them and tsc reads this file fine.
+  //
+  // But the skip turned out to be the right outcome. This repo sets
+  // strictFunctionTypes, strictBindCallApply, strictPropertyInitialization,
+  // noImplicitThis, alwaysStrict, noImplicitReturns, noFallthroughCasesInSwitch,
+  // noUnusedLocals and noUnusedParameters — all BEYOND the shared base. Extending it
+  // would have silently RELAXED this repo, which is the one carrying mortgage and
+  // consent code and where 135 real type errors were fixed last week.
+  //
+  // A shared base is for repos that would otherwise drift downward. This one drifted
+  // upward on purpose.
   "compilerOptions": {
     // Target and Module Settings
     "target": "ES2020",
