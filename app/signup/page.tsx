@@ -114,12 +114,12 @@ export default function SignupPage() {
               We've sent a confirmation link to <strong>{email}</strong>. 
               Click the link to activate your account.
             </p>
-            <Link 
-              href="/login"
+            <a 
+              href="https://craudiovizai.com/auth/login"
               className="text-blue-600 hover:text-blue-700 font-semibold"
             >
               Back to Login
-            </Link>
+            </a>
           </div>
         </div>
       </div>
@@ -297,12 +297,12 @@ export default function SignupPage() {
         {/* Login Link */}
         <p className="mt-6 text-center text-gray-600">
           Already have an account?{' '}
-          <Link 
-            href="/login" 
+          <a 
+            href="https://craudiovizai.com/auth/login" 
             className="text-blue-600 hover:text-blue-700 font-semibold"
           >
             Sign in
-          </Link>
+          </a>
         </p>
       </div>
     </div>

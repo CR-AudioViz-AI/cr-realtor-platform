@@ -322,8 +322,8 @@ export default function PricingPage() {
                     ))}
                   </ul>
                   
-                  <Link 
-                    href="/signup"
+                  <a 
+                    href="https://craudiovizai.com/auth/signup"
                     className={`block w-full py-3 px-4 rounded-lg font-semibold text-center transition-all ${
                       plan.popular
                         ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
@@ -331,7 +331,7 @@ export default function PricingPage() {
                     }`}
                   >
                     {plan.cta}
-                  </Link>
+                  </a>
                 </div>
               )
             })}
@@ -570,12 +570,12 @@ export default function PricingPage() {
             14-day free trial, no credit card required.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link 
-              href="/signup"
+            <a 
+              href="https://craudiovizai.com/auth/signup"
               className="inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-4 px-8 rounded-lg transition-all"
             >
               Start Free Trial <ArrowRight className="w-5 h-5" />
-            </Link>
+            </a>
             <Link 
               href="/demo"
               className="inline-flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-4 px-8 rounded-lg transition-all"

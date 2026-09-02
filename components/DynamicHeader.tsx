@@ -61,19 +61,19 @@ export function DynamicHeader() {
           
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Link 
-              href="/login"
+            <a 
+              href="https://craudiovizai.com/auth/login"
               className="text-slate-300 hover:text-white transition px-4 py-2"
             >
               Log In
-            </Link>
-            <Link 
-              href="/signup"
+            </a>
+            <a 
+              href="https://craudiovizai.com/auth/signup"
               className="text-white font-semibold px-4 py-2 rounded-lg transition"
               style={{ backgroundColor: brand.primaryColor }}
             >
               {brand.isConsumer ? 'Sign Up Free' : 'Start Free Trial'}
-            </Link>
+            </a>
           </div>
           
           {/* Mobile menu button */}
@@ -99,19 +99,19 @@ export function DynamicHeader() {
               </Link>
             ))}
             <div className="flex gap-2 mt-4">
-              <Link 
-                href="/login"
+              <a 
+                href="https://craudiovizai.com/auth/login"
                 className="flex-1 text-center text-slate-300 border border-slate-700 py-2 rounded-lg"
               >
                 Log In
-              </Link>
-              <Link 
-                href="/signup"
+              </a>
+              <a 
+                href="https://craudiovizai.com/auth/signup"
                 className="flex-1 text-center text-white py-2 rounded-lg"
                 style={{ backgroundColor: brand.primaryColor }}
               >
                 Sign Up
-              </Link>
+              </a>
             </div>
           </div>
         )}

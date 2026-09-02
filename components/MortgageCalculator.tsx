@@ -404,7 +404,7 @@ export default function MortgageCalculator({
                   Tony Harvey can connect you with trusted lenders
                 </p>
                 <a
-                  href="/contact"
+                  href="https://craudiovizai.com/contact"
                   className="inline-block px-6 py-3 bg-white text-blue-600 font-semibold rounded-xl hover:bg-blue-50 transition"
                 >
                   Contact Tony

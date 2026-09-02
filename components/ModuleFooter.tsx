@@ -69,7 +69,7 @@ export default function ModuleFooter({ moduleName, moduleIcon }: ModuleFooterPro
               <li><Link href="/" className="hover:text-white transition-colors">Home</Link></li>
               <li><Link href="/help" className="hover:text-white transition-colors">Help Center</Link></li>
               <li><Link href="/about" className="hover:text-white transition-colors">About Us</Link></li>
-              <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
+              <li><a href="https://craudiovizai.com/contact" className="hover:text-white transition-colors">Contact</a></li>
             </ul>
           </div>
 
