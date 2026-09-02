@@ -44,9 +44,9 @@ export default function QRCodeGeneratorPage() {
     baths: 3,
     sqft: 2400,
     mls: 'MLS123456',
-    agentName: 'Tony Harvey',
+    agentName: 'Your Name',
     agentPhone: '(239) 555-0100',
-    agentEmail: 'tony@listorbuyrealestate.com',
+    agentEmail: 'you@example.com',
     companyName: 'List or Buy Real Estate',
   })
   
