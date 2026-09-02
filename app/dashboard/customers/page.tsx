@@ -4,7 +4,7 @@
 // CR REALTOR PLATFORM - AGENT CUSTOMER MANAGEMENT
 // Path: app/dashboard/customers/page.tsx
 // Timestamp: 2025-12-01 4:25 PM EST
-// Purpose: Tony can create, view, and message customers
+// Purpose: an agent can create, view, and message customers
 // Uses: Pure Tailwind CSS (no shadcn/ui)
 // =====================================================
 
