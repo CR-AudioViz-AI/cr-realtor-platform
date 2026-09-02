@@ -213,7 +213,7 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div>
               <p className="font-medium text-gray-900">New Agent Registered</p>
-              <p className="text-sm text-gray-600">Tony Harvey joined</p>
+              <p className="text-sm text-gray-600">New agent joined</p>
             </div>
             <p className="text-sm text-gray-500">Today</p>
           </div>
