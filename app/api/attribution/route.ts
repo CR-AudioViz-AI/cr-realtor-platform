@@ -21,7 +21,7 @@
 //
 // The design fault underneath: it assumed a signed-in user with a known
 // agent_id at the moment of attribution. The actual case is an ANONYMOUS
-// visitor clicking zoyzy.com/search?ref=tony-harvey. There is no user yet —
+// visitor clicking zoyzy.com/search?ref=an-agent-code. There is no user yet —
 // only a session. Events carry session_id and gain user_id later, at signup.
 //
 // CR AudioViz AI, LLC · EIN 39-3646201
