@@ -412,7 +412,7 @@ export default function EmailSettingsPage() {
                         type="text"
                         value={smtpForm.sender_name}
                         onChange={(e) => setSmtpForm({...smtpForm, sender_name: e.target.value})}
-                        placeholder="Tony Harvey"
+                        placeholder="Your name"
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
