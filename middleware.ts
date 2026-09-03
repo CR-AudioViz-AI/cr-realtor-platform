@@ -223,9 +223,25 @@ export function middleware(request: NextRequest) {
   response.headers.set('x-is-consumer', brandConfig.isConsumerFacing ? 'true' : 'false')
   
   // Set cookies for client-side access
-  response.cookies.set('brand', brandConfig.brand, { path: '/' })
-  response.cookies.set('brandName', brandConfig.name, { path: '/' })
-  response.cookies.set('isConsumer', brandConfig.isConsumerFacing ? 'true' : 'false', { path: '/' })
+  // 2026-09-04: these three carried only a path — no Secure, no SameSite. Found
+  // by Javari Verify on javarimanage.com, javarimortgage.com and
+  // javariproperty.com, three domains this middleware serves that had never been
+  // scanned until today.
+  //
+  // None of them holds a secret, so this is not an account-takeover fix. Without
+  // Secure they travel in plaintext on the first request after a cold start, and
+  // without SameSite they ride along on cross-site requests. Neither costs
+  // anything to close, and a cookie with no flags is the kind of thing that
+  // teaches a codebase that flags are optional.
+  //
+  // httpOnly is deliberately absent: the client reads brand and isConsumer to
+  // render the right shell, exactly as it reads zsid for attribution. That is a
+  // stated design decision rather than an oversight, which is why it is written
+  // down here instead of being left for the next reader to wonder about.
+  const clientReadable = { path: '/', secure: true, sameSite: 'lax' as const }
+  response.cookies.set('brand', brandConfig.brand, clientReadable)
+  response.cookies.set('brandName', brandConfig.name, clientReadable)
+  response.cookies.set('isConsumer', brandConfig.isConsumerFacing ? 'true' : 'false', clientReadable)
   
   return response
 }
