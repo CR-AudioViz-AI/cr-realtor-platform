@@ -40,7 +40,7 @@ interface Lead {
 // Mock data - would come from Supabase in production
 const mockDemos: Demo[] = [
   {
-    id: 'demo-premiere-plus-1',
+    id: 'demo-agency-1',
     brokerage: 'Premiere Plus Realty',
     agents: 2,
     markets: ['Naples', 'Fort Myers', 'Bonita Springs'],

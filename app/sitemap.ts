@@ -7,6 +7,13 @@ import type { MetadataRoute } from 'next'
 
 const BASE = 'https://javarikeys.com'
 
+// 2026-09-03: /demo/premiere-plus and /demo/tony-laura were removed from this
+// sitemap after the pages themselves were deleted. They were demo sites built for
+// a specific named agency, carrying real people's names and email addresses.
+//
+// A sitemap entry for a deleted page is worse than a dead link in a footer: it is
+// an active instruction to search engines to index a 404, and Javari Verify found
+// both still being crawled.
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date()
   return [
@@ -109,8 +116,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE}/dashboard/tools/net-sheet`, lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${BASE}/dashboard/transactions`, lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${BASE}/dashboard/vendors`, lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
-    { url: `${BASE}/demo/premiere-plus`, lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
-    { url: `${BASE}/demo/tony-laura`, lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${BASE}/disabilities`, lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${BASE}/eco-living`, lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${BASE}/faith-based`, lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
