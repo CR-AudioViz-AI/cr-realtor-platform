@@ -1,3 +1,15 @@
+// 2026-09-04: the /homefinder/* links pointed at routes that were never built.
+// Every one of them exists WITHOUT the prefix, so this was a path error rather
+// than missing pages: search, agents, mortgage, properties, market-report, team.
+//
+// Found by Javari Verify on javarimanage.com, javarimortgage.com, javariproperty.com
+// and zoyzy.com - four domains this app serves that had never been scanned until
+// today, because the sweep list covered 63 of 110 live domains.
+//
+// Sell and Home Value both point at /market-report: there is no dedicated seller
+// funnel, and a seller asking either question wants the same page. Every target was
+// confirmed to exist first - a link repointed at another 404 is the same defect
+// wearing a different path.
 // app/homefinder/property/[id]/page.tsx
 // HomeFinder Property Detail with Lead Capture
 
@@ -63,7 +75,7 @@ export default async function HomeFinderPropertyPage({ params }: { params: { id:
               </div>
               <span className="text-2xl font-bold text-gray-900">HomeFinder<span className="text-emerald-600">AI</span></span>
             </Link>
-            <Link href="/homefinder/search" className="text-gray-700 hover:text-emerald-600 font-medium">← Back to Search</Link>
+            <Link href="/search" className="text-gray-700 hover:text-emerald-600 font-medium">← Back to Search</Link>
           </div>
         </div>
       </nav>

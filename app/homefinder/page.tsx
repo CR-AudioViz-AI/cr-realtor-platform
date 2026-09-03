@@ -1,3 +1,15 @@
+// 2026-09-04: the /homefinder/* links pointed at routes that were never built.
+// Every one of them exists WITHOUT the prefix, so this was a path error rather
+// than missing pages: search, agents, mortgage, properties, market-report, team.
+//
+// Found by Javari Verify on javarimanage.com, javarimortgage.com, javariproperty.com
+// and zoyzy.com - four domains this app serves that had never been scanned until
+// today, because the sweep list covered 63 of 110 live domains.
+//
+// Sell and Home Value both point at /market-report: there is no dedicated seller
+// funnel, and a seller asking either question wants the same page. Every target was
+// confirmed to exist first - a link repointed at another 404 is the same defect
+// wearing a different path.
 // app/homefinder/page.tsx
 // HomeFinder AI - Public Property Search (Separate Brand)
 // This is the "Zillow Competitor" that routes leads to our agents
@@ -68,9 +80,9 @@ export default async function HomeFinderPage() {
               <span className="text-2xl font-bold text-gray-900">HomeFinder<span className="text-emerald-600">AI</span></span>
             </Link>
             <div className="flex items-center space-x-6">
-              <Link href="/homefinder/buy" className="text-gray-700 hover:text-emerald-600 font-medium">Buy</Link>
-              <Link href="/homefinder/sell" className="text-gray-700 hover:text-emerald-600 font-medium">Sell</Link>
-              <Link href="/homefinder/agents" className="text-gray-700 hover:text-emerald-600 font-medium">Find Agent</Link>
+              <Link href="/properties" className="text-gray-700 hover:text-emerald-600 font-medium">Buy</Link>
+              <Link href="/market-report" className="text-gray-700 hover:text-emerald-600 font-medium">Sell</Link>
+              <Link href="/agents" className="text-gray-700 hover:text-emerald-600 font-medium">Find Agent</Link>
               <Link href="/auth/signup" className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium">Sign In</Link>
             </div>
           </div>
@@ -105,7 +117,7 @@ export default async function HomeFinderPage() {
                     className="flex-1 bg-transparent outline-none text-lg"
                   />
                 </div>
-                <Link href="/homefinder/search" className="px-8 py-4 bg-emerald-600 text-white rounded-lg font-bold text-lg hover:bg-emerald-700 flex items-center">
+                <Link href="/search" className="px-8 py-4 bg-emerald-600 text-white rounded-lg font-bold text-lg hover:bg-emerald-700 flex items-center">
                   <Search className="w-5 h-5 mr-2" />
                   Search
                 </Link>
@@ -113,19 +125,19 @@ export default async function HomeFinderPage() {
 
               {/* Quick Filters */}
               <div className="grid grid-cols-4 gap-4 mt-6">
-                <Link href="/homefinder/search?minPrice=0&maxPrice=300000" className="p-3 border-2 border-gray-200 rounded-lg hover:border-emerald-600 text-center transition-colors">
+                <Link href="/search?minPrice=0&maxPrice=300000" className="p-3 border-2 border-gray-200 rounded-lg hover:border-emerald-600 text-center transition-colors">
                   <div className="font-semibold text-gray-900">Under $300K</div>
                   <div className="text-sm text-gray-600">Affordable homes</div>
                 </Link>
-                <Link href="/homefinder/search?minPrice=300000&maxPrice=500000" className="p-3 border-2 border-gray-200 rounded-lg hover:border-emerald-600 text-center transition-colors">
+                <Link href="/search?minPrice=300000&maxPrice=500000" className="p-3 border-2 border-gray-200 rounded-lg hover:border-emerald-600 text-center transition-colors">
                   <div className="font-semibold text-gray-900">$300K - $500K</div>
                   <div className="text-sm text-gray-600">Mid-range homes</div>
                 </Link>
-                <Link href="/homefinder/search?minPrice=500000&maxPrice=1000000" className="p-3 border-2 border-gray-200 rounded-lg hover:border-emerald-600 text-center transition-colors">
+                <Link href="/search?minPrice=500000&maxPrice=1000000" className="p-3 border-2 border-gray-200 rounded-lg hover:border-emerald-600 text-center transition-colors">
                   <div className="font-semibold text-gray-900">$500K - $1M</div>
                   <div className="text-sm text-gray-600">Luxury homes</div>
                 </Link>
-                <Link href="/homefinder/search?minPrice=1000000" className="p-3 border-2 border-gray-200 rounded-lg hover:border-emerald-600 text-center transition-colors">
+                <Link href="/search?minPrice=1000000" className="p-3 border-2 border-gray-200 rounded-lg hover:border-emerald-600 text-center transition-colors">
                   <div className="font-semibold text-gray-900">$1M+</div>
                   <div className="text-sm text-gray-600">Premium estates</div>
                 </Link>
@@ -140,7 +152,7 @@ export default async function HomeFinderPage() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-3xl font-bold text-gray-900">Featured Homes</h2>
-            <Link href="/homefinder/search" className="text-emerald-600 font-semibold hover:text-emerald-700">
+            <Link href="/search" className="text-emerald-600 font-semibold hover:text-emerald-700">
               View All →
             </Link>
           </div>
@@ -237,22 +249,22 @@ export default async function HomeFinderPage() {
             <div>
               <h4 className="text-white font-bold mb-4">For Buyers</h4>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/homefinder/search" className="hover:text-white">Search Homes</Link></li>
-                <li><Link href="/homefinder/agents" className="hover:text-white">Find an Agent</Link></li>
-                <li><Link href="/homefinder/mortgage" className="hover:text-white">Mortgage Calculator</Link></li>
+                <li><Link href="/search" className="hover:text-white">Search Homes</Link></li>
+                <li><Link href="/agents" className="hover:text-white">Find an Agent</Link></li>
+                <li><Link href="/mortgage" className="hover:text-white">Mortgage Calculator</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="text-white font-bold mb-4">For Sellers</h4>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/homefinder/sell" className="hover:text-white">Sell Your Home</Link></li>
-                <li><Link href="/homefinder/value" className="hover:text-white">Home Value Estimate</Link></li>
+                <li><Link href="/market-report" className="hover:text-white">Sell Your Home</Link></li>
+                <li><Link href="/market-report" className="hover:text-white">Home Value Estimate</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="text-white font-bold mb-4">Company</h4>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/about" className="hover:text-white">About Us</Link></li>
+                <li><Link href="/team" className="hover:text-white">About Us</Link></li>
                 <li><a href="https://craudiovizai.com/contact" className="hover:text-white">Contact</a></li>
                 <li><Link href="/privacy" className="hover:text-white">Privacy</Link></li>
               </ul>
