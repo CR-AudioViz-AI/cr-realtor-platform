@@ -44,11 +44,47 @@ function getConsentText(scopes: ConsentScope[]): string {
 }
 
 // POST - Grant or update consent
+
+// 2026-09-04: IDOR CLOSED on all three handlers.
+//
+// POST, GET and DELETE each took user_id straight from the request and used it
+// against a SERVICE-ROLE client, which bypasses row level security. Nothing
+// authenticated the caller.
+//
+// This is a CONSENT api, which makes it the worst place for this defect. It
+// allowed anyone to read whose data an agent may access, to GRANT an agent access
+// to a stranger's data by posting their id, and to WITHDRAW somebody's consent
+// without their knowledge. A consent record that can be written by anyone is not
+// a consent record.
+//
+// The id now comes from the verified bearer token. A user_id in the request is
+// ignored rather than validated, because accepting one at all is the defect.
+async function callerId(request: NextRequest): Promise<string | null> {
+  const header = request.headers.get('authorization') ?? '';
+  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : null;
+  if (!token) return null;
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.auth.getUser(token);
+  if (error || !data?.user) return null;
+  return data.user.id;
+}
+
+function unauthorised(): NextResponse {
+  return NextResponse.json(
+    { success: false, message: 'Sign in required.', code: 'AUTH_REQUIRED' },
+    { status: 401 },
+  );
+}
+
 export async function POST(request: NextRequest) {
   const supabase = getSupabase()!
   try {
     const body: ConsentRequest = await request.json();
-    const { user_id, agent_id, scopes, ip_address, user_agent } = body;
+    // user_id is deliberately not taken from the body.
+    const { agent_id, scopes, ip_address, user_agent } = body;
+    const user_id = await callerId(request);
+    if (!user_id) return unauthorised();
 
     // Validate required fields
     if (!user_id || !agent_id || !scopes || scopes.length === 0) {
@@ -151,8 +187,9 @@ export async function GET(request: NextRequest) {
   const supabase = getSupabase()!
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('user_id');
     const agentId = searchParams.get('agent_id');
+    const userId = await callerId(request);
+    if (!userId) return unauthorised();
 
     if (!userId || !agentId) {
       return NextResponse.json(
@@ -217,7 +254,9 @@ export async function DELETE(request: NextRequest) {
   const supabase = getSupabase()!
   try {
     const body: WithdrawConsentRequest = await request.json();
-    const { consent_id, user_id, reason } = body;
+    const { consent_id, reason } = body;
+    const user_id = await callerId(request);
+    if (!user_id) return unauthorised();
 
     if (!consent_id || !user_id) {
       return NextResponse.json(
