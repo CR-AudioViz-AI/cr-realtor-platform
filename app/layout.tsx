@@ -45,13 +45,16 @@ export async function generateMetadata(): Promise<Metadata> {
   // metadataBase is resolved from the request host rather than hardcoded,
   // because one engine serves zoyzy.com, javarikeys.com and javariproperty.com
   // — a fixed base would advertise the wrong domain on two of the three.
-  const host = (() => {
-    try {
-      return headers().get('x-forwarded-host') ?? headers().get('host') ?? 'zoyzy.com'
-    } catch {
-      return 'zoyzy.com'
-    }
-  })()
+  // 2026-09-05: awaited. headers() returns a Promise in Next 16, so the
+  // synchronous IIFE this replaced could not work - and it was called twice for
+  // the same object, which as a Promise is two awaits for one value.
+  let host = 'zoyzy.com'
+  try {
+    const hh = await headers()
+    host = hh.get('x-forwarded-host') ?? hh.get('host') ?? 'zoyzy.com'
+  } catch {
+    // Outside a request scope. The default stands.
+  }
   return {
     title: b.name,
     description,
