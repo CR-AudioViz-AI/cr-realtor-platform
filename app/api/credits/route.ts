@@ -11,6 +11,37 @@ const supabase = SUPABASE_SERVICE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
   : null
 
+
+// 2026-09-04: IDOR CLOSED.
+//
+// Both handlers took a userId from the request - the query string on GET, the
+// body on POST - and used it against a SERVICE-ROLE client, which bypasses row
+// level security entirely. There was no authentication of any kind.
+//
+// What that allowed: anyone could read anyone's credit balance by guessing a
+// user id, and anyone could SPEND another person's credits by posting that id
+// with an action. A stranger's balance drains and the ledger records it as their
+// own spend.
+//
+// The fix is not to validate the id better. It is to stop accepting one. The
+// caller is authenticated and the server decides whose credits these are, which
+// removes the whole class rather than one route's version of it.
+async function callerId(request: NextRequest): Promise<string | null> {
+  const header = request.headers.get('authorization') ?? '';
+  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : null;
+  if (!token || !supabase) return null;
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data?.user) return null;
+  return data.user.id;
+}
+
+function unauthorised(): NextResponse {
+  return NextResponse.json(
+    { error: 'Sign in required.', code: 'AUTH_REQUIRED' },
+    { status: 401 },
+  );
+}
+
 // Credit costs for realtor platform actions
 const CREDIT_COSTS = {
   'ai_listing_description': 3,
@@ -23,8 +54,10 @@ const CREDIT_COSTS = {
 
 // GET - Check credit balance
 export async function GET(request: NextRequest) {
-  const userId = request.nextUrl.searchParams.get('userId')
-  
+  // The id comes from the verified session, not the caller.
+  const userId = await callerId(request)
+  if (!userId) return unauthorised()
+
   if (!userId) {
     return NextResponse.json({ error: 'User ID required' }, { status: 400 })
   }
