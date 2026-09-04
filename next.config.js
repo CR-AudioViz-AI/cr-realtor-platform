@@ -52,6 +52,13 @@ const nextConfig = {
   eslint: { ignoreDuringBuilds: true },
   reactStrictMode: false,
   // Prevent any static generation - all pages dynamic
-  staticPageGenerationTimeout: 0,
+  // 2026-09-05: was 0, which meant "no limit" under Next 15 and means ZERO
+  // SECONDS under Next 16. Every route failed instantly with "took more than 0
+  // seconds" and the build aborted on /robots.txt.
+  //
+  // A silent meaning change in a config value is the worst kind of upgrade
+  // break: the value is still valid, still accepted, and now does the opposite.
+  // 120 is Next's own default and is what this was trying to say.
+  staticPageGenerationTimeout: 120,
 }
 module.exports = nextConfig

@@ -13,9 +13,12 @@ export const dynamic = 'force-dynamic'
 // brand comes from middleware, which now forwards it on the request.
 interface Brand { name: string; tagline: string; consumer: boolean }
 
-function brand(): Brand {
+// 2026-09-05: async for Next 16. headers() now returns a Promise, so every
+// caller must await it and every function that reads it becomes async. That is
+// the one genuine API change in this upgrade - the rest was a builder swap.
+async function brand(): Promise<Brand> {
   try {
-    const h = headers()
+    const h = await headers()
     const name = h.get('x-brand-name')
     if (name) {
       return {
@@ -31,7 +34,7 @@ function brand(): Brand {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const b = brand()
+  const b = await brand()
   const description = b.consumer
     ? `${b.name} — ${b.tagline}. Search homes, track value, and work with an agent who is actually yours.`
     : `${b.name} — ${b.tagline}. Listings, market reports, client follow-up and closings in one place.`
@@ -42,13 +45,16 @@ export async function generateMetadata(): Promise<Metadata> {
   // metadataBase is resolved from the request host rather than hardcoded,
   // because one engine serves zoyzy.com, javarikeys.com and javariproperty.com
   // — a fixed base would advertise the wrong domain on two of the three.
-  const host = (() => {
-    try {
-      return headers().get('x-forwarded-host') ?? headers().get('host') ?? 'zoyzy.com'
-    } catch {
-      return 'zoyzy.com'
-    }
-  })()
+  // 2026-09-05: awaited. headers() returns a Promise in Next 16, so the
+  // synchronous IIFE this replaced could not work - and it was called twice for
+  // the same object, which as a Promise is two awaits for one value.
+  let host = 'zoyzy.com'
+  try {
+    const hh = await headers()
+    host = hh.get('x-forwarded-host') ?? hh.get('host') ?? 'zoyzy.com'
+  } catch {
+    // Outside a request scope. The default stands.
+  }
   return {
     title: b.name,
     description,
@@ -72,7 +78,11 @@ export async function generateMetadata(): Promise<Metadata> {
     },
   }
 }
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+// 2026-09-05: async because brand() now awaits headers(), which returns a Promise
+// in Next 16. A server component may be async; this one had no reason to be until
+// the framework made reading the request asynchronous.
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const b = await brand()
   return (
     <html lang="en">
       <body style={{ margin: 0, padding: 0, fontFamily: 'system-ui,sans-serif' }}>
@@ -80,7 +90,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div style={{ background: 'rgba(7,8,15,0.95)', backdropFilter: 'blur(8px)', height: 48, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, borderBottom: '1px solid rgba(99,102,241,0.12)' }}>
           <a href="https://craudiovizai.com" style={{ color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 16 }}>🏠</span>
-            <span style={{ color: '#10b981' }}>{brand().name}</span>
+            <span style={{ color: '#10b981' }}>{b.name}</span>
             <span style={{ color: '#374151', fontSize: 10 }}>· CR AudioViz AI · EIN 39-3646201</span>
           </a>
           <a href="https://craudiovizai.com/auth/signup" style={{ background: '#10b981', color: '#000', borderRadius: 6, padding: '5px 14px', fontSize: 11, fontWeight: 700, textDecoration: 'none' }}>Sign Up Free →</a>
