@@ -1,21 +1,23 @@
 // Build trigger: 1779135720
 /** @type {import('next').NextConfig} */
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://js.stripe.com https://checkout.stripe.com https://www.paypal.com https://*.paypal.com https://www.paypalobjects.com https://*.paypalobjects.com https://app.posthog.com https://*.posthog.com https://*.i.posthog.com https://*.pusher.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+  "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com",
+  "img-src 'self' data: blob: https: http:",
+  "media-src 'self' data: blob: https: http:",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://api.anthropic.com https://api.groq.com https://openrouter.ai https://api.elevenlabs.io https://api.replicate.com https://api.stability.ai https://api.d-id.com https://api.heygen.com https://api.shotstack.io https://api.cloudinary.com https://*.r2.cloudflarestorage.com https://app.posthog.com https://*.posthog.com https://*.i.posthog.com https://*.pusher.com wss://*.pusher.com https://api.stripe.com https://checkout.stripe.com https://m.stripe.network https://*.stripe.com https://www.paypal.com https://*.paypal.com https://api-m.paypal.com https://api.resend.com https://api.twilio.com",
+  "frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com https://www.paypal.com https://*.paypal.com",
+  "worker-src 'self' blob:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "upgrade-insecure-requests",
+].join("; ");
+
 const nextConfig = {
-  const CSP = [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://js.stripe.com https://checkout.stripe.com https://www.paypal.com https://*.paypal.com https://www.paypalobjects.com https://*.paypalobjects.com https://app.posthog.com https://*.posthog.com https://*.i.posthog.com https://*.pusher.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
-      "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com",
-      "img-src 'self' data: blob: https: http:",
-      "media-src 'self' data: blob: https: http:",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://api.anthropic.com https://api.groq.com https://openrouter.ai https://api.elevenlabs.io https://api.replicate.com https://api.stability.ai https://api.d-id.com https://api.heygen.com https://api.shotstack.io https://api.cloudinary.com https://*.r2.cloudflarestorage.com https://app.posthog.com https://*.posthog.com https://*.i.posthog.com https://*.pusher.com wss://*.pusher.com https://api.stripe.com https://checkout.stripe.com https://m.stripe.network https://*.stripe.com https://www.paypal.com https://*.paypal.com https://api-m.paypal.com https://api.resend.com https://api.twilio.com",
-      "frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com https://www.paypal.com https://*.paypal.com",
-      "worker-src 'self' blob:",
-      "object-src 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "upgrade-insecure-requests",
-    ].join("; ");
+
 
   async headers() {
     // 2026-09-02: this app served ONE of six security headers while core served
