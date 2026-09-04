@@ -1,6 +1,75 @@
 // lib/email.ts - Email service using Resend for CR Realtor Platform
 import { Resend } from 'resend';
 
+// 2026-09-04: suppression and consent, reading the SAME central tables the core
+// platform uses - email_suppressions and email_preferences.
+//
+// This module sent every message straight to Resend. sendNewListingAlert mails
+// customers about properties, which is marketing, and nothing checked whether the
+// recipient had unsubscribed or whether their address had already hard-bounced.
+//
+// The consent system was built and tested in the core platform months ago. It was
+// never reached from here, because this repository has its own email module and
+// nobody swept the ecosystem after building the gate. Logging that gap would have
+// left it open; this closes it.
+//
+// Mailing an address that has hard-bounced is what damages a sending domain, and a
+// domain is shared across every brand this engine serves.
+
+type EmailCategory = "transactional" | "marketing";
+
+/** Categories a recipient may opt out of. The rest are a record of something they did. */
+const OPTIONAL = new Set<EmailCategory>(["marketing"]);
+
+function consentDb() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return { url: url.replace(/\/+$/, ""), key };
+}
+
+async function centralGet(path: string): Promise<unknown[] | null> {
+  const db = consentDb();
+  if (!db) return null;
+  try {
+    const res = await fetch(`${db.url}/rest/v1/${path}`, {
+      headers: { apikey: db.key, Authorization: `Bearer ${db.key}` },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const body: unknown = await res.json();
+    return Array.isArray(body) ? body : null;
+  } catch {
+    return null;
+  }
+}
+
+/** True when this address must not be mailed at all. */
+async function isSuppressed(email: string): Promise<boolean> {
+  const rows = await centralGet(
+    `email_suppressions?select=email&email=eq.${encodeURIComponent(email.toLowerCase())}&limit=1`,
+  );
+  // A lookup that FAILS returns null, and null must not read as "not suppressed".
+  // Failing closed on marketing is the safe direction: a delayed newsletter costs
+  // nothing, a mail to a hard-bounced address costs sending reputation.
+  if (rows === null) return true;
+  return rows.length > 0;
+}
+
+/** True when this category may be sent to this address. */
+async function hasConsent(email: string, category: EmailCategory): Promise<boolean> {
+  if (!OPTIONAL.has(category)) return true;
+  const rows = await centralGet(
+    `email_preferences?select=marketing,unsubscribed_at&email=eq.${encodeURIComponent(email.toLowerCase())}&limit=1`,
+  );
+  if (rows === null) return false;      // fail closed, as above
+  if (rows.length === 0) return true;   // no record means no opt-out has been expressed
+  const row = rows[0] as { marketing?: boolean | null; unsubscribed_at?: string | null };
+  if (row.unsubscribed_at) return false;
+  return row.marketing !== false;
+}
+
+
 let _resend: Resend | null = null;
 function getResend() {
   if (!_resend && process.env.RESEND_API_KEY) _resend = new Resend(process.env.RESEND_API_KEY);
@@ -14,7 +83,19 @@ export async function sendEmail(data: {
   subject: string;
   html: string;
   from?: string;
+  /** Defaults to transactional. Anything a recipient may opt out of must say so. */
+  category?: EmailCategory;
 }) {
+  // Every message from this module now passes the same two checks the core
+  // platform applies, against the same tables.
+  const category: EmailCategory = data.category ?? "transactional";
+  if (await isSuppressed(data.to)) {
+    return { success: true, skipped: "suppressed" as const };
+  }
+  if (!(await hasConsent(data.to, category))) {
+    return { success: true, skipped: "unsubscribed" as const };
+  }
+
   if (!process.env.RESEND_API_KEY) {
     console.log('RESEND_API_KEY not set, skipping email');
     return { success: true, demo: true };
@@ -99,7 +180,7 @@ export async function sendNewListingAlert(data: {
       </div>
     </div>
   `).join('');
-  return sendEmail({ to: data.customerEmail, subject: `🏠 ${data.properties.length} New Properties Match: ${data.searchName}`, html: `<body style="font-family: Arial; max-width: 600px; margin: 0 auto; padding: 20px;"><h2>New Properties for You!</h2><p>Hi ${data.customerName}, ${data.properties.length} new properties match "${data.searchName}":</p>${cards}</body>` });
+  return sendEmail({ category: 'marketing', to: data.customerEmail, subject: `🏠 ${data.properties.length} New Properties Match: ${data.searchName}`, html: `<body style="font-family: Arial; max-width: 600px; margin: 0 auto; padding: 20px;"><h2>New Properties for You!</h2><p>Hi ${data.customerName}, ${data.properties.length} new properties match "${data.searchName}":</p>${cards}</body>` });
 }
 
 // Showing confirmation
