@@ -72,6 +72,13 @@ const AUTH_GATE = [
   // the safe-looking direction: it silences a real finding rather than raising a
   // false one, and nobody notices a warning that stopped appearing.
   /requirePermission\s*\(/,
+  // 2026-09-04: adminAuthorised added, VERIFIED not assumed. It requires the full
+  // ADMIN_API_SECRET in an Authorization header, refuses when that secret is
+  // unset or shorter than 24 characters, and compares in constant time. It
+  // replaced a gate that accepted the last ten characters of the service-role key
+  // from a QUERY STRING - on routes that set passwords and change email
+  // addresses.
+  /adminAuthorised\s*\(/,
   /callerId\s*\(/,
   /getUserFromRequest\s*\(/,
   // 2026-08-27: resolveExpensesOrg added, verified not assumed. It is the wrapper

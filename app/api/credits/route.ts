@@ -109,9 +109,15 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userId, amount, action, appId = 'realtor-platform', metadata } = body
+    // 2026-09-04: userId deliberately not taken from the body. The earlier fix
+    // landed on GET only, which is exactly why the guard is wired into the build
+    // rather than run once by hand.
+    const { amount, action, appId = 'realtor-platform', metadata } = body
 
-    if (!userId || !action) {
+    const userId = await callerId(request)
+    if (!userId) return unauthorised()
+
+    if (!action) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 

@@ -10,13 +10,47 @@ function getSupabase() {
   return sb.createClient(url, key, { auth: { persistSession: false } })
 }
 
+
+/**
+ * 2026-09-04: the gate was the last ten characters of the service-role key,
+ * passed in a QUERY STRING.
+ *
+ * Three problems, and this route sets passwords, so each of them is account
+ * takeover:
+ *
+ *   A URL is not a secret channel. Query strings land in proxy logs, browser
+ *   history, referrer headers and every access log between here and the client.
+ *
+ *   The value is DERIVED FROM the service-role key. Leaking it leaks ten
+ *   characters of the credential that owns the database.
+ *
+ *   Ten characters is short enough to attack, and nothing here rate-limits or
+ *   records the attempt.
+ *
+ * Now it requires the full ADMIN_API_SECRET in an Authorization header, compared
+ * in constant time, and refuses outright when that secret is unset rather than
+ * falling back to anything.
+ */
+function adminAuthorised(request: Request): boolean {
+  const expected = process.env.ADMIN_API_SECRET;
+  if (!expected || expected.length < 24) return false;
+
+  const header = request.headers.get('authorization') ?? '';
+  const given = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  if (given.length !== expected.length) return false;
+
+  // Constant-time comparison: a length-varying early return leaks the secret one
+  // character at a time to anyone willing to measure.
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) {
+    diff |= expected.charCodeAt(i) ^ given.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const adminKey = searchParams.get('key')
-    
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!serviceKey || !adminKey || adminKey !== serviceKey.slice(-10)) {
+    if (!adminAuthorised(request)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     

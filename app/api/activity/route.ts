@@ -1,6 +1,31 @@
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 import { NextRequest, NextResponse } from 'next/server'
+
+/**
+ * 2026-09-04: the actor comes from the caller's token, not from the body.
+ *
+ * This recorded activity under whichever userId was posted, against a
+ * service-role client. Anyone could write entries into another person's activity
+ * history - which is both a falsified audit trail and, since the same rows drive
+ * usage reporting, a way to attribute someone else's usage to them.
+ */
+async function callerId(request: Request): Promise<string | null> {
+  const header = request.headers.get('authorization') ?? ''
+  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : null
+  if (!token) return null
+  try {
+    const { data, error } = await getSupabase().auth.getUser(token)
+    if (error || !data?.user) return null
+    return data.user.id
+  } catch {
+    return null
+  }
+}
+
+function unauthorised(): NextResponse {
+  return NextResponse.json({ error: 'Sign in required.', code: 'AUTH_REQUIRED' }, { status: 401 })
+}
 import { createClient } from '@supabase/supabase-js'
 
 // Central Supabase for logging
@@ -14,9 +39,13 @@ const supabase = SUPABASE_SERVICE_KEY
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userId, action, appId, metadata } = body
+    // userId deliberately not taken from the body.
+    const { action, appId, metadata } = body
 
-    if (!userId || !action || !appId) {
+    const userId = await callerId(request)
+    if (!userId) return unauthorised()
+
+    if (!action || !appId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
