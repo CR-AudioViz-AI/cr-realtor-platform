@@ -1,3 +1,13 @@
+// 2026-09-04: retired model replaced.
+//
+// gpt-4-turbo-preview no longer exists at the provider. A request naming it returns 404, and
+// most call sites treat a failed completion as an empty answer - so the feature
+// degrades silently rather than erroring, and nobody reports it.
+//
+// gpt-4.1-nano is the current equivalent under the platform's cost order, verified
+// answering this session. Found by sweeping the fleet with core's
+// audit-model-names guard, which no satellite runs: core has had it since
+// 25 August, when every free model named in the codebase turned out to be retired.
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 import { NextRequest, NextResponse } from 'next/server'
@@ -106,7 +116,7 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4-turbo-preview',
+        model: 'gpt-4.1-nano',
         messages: [
           { 
             role: 'system', 
