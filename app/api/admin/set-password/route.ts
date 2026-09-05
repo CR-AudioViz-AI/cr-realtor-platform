@@ -53,6 +53,16 @@ export async function POST(request: NextRequest) {
     if (!adminAuthorised(request)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Still needed to build the admin client below. It is read here and never
+    // compared against anything a caller sent - that comparison was the defect.
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!serviceKey) {
+      return NextResponse.json(
+        { error: 'Not configured.', code: 'NOT_CONFIGURED' },
+        { status: 503 },
+      )
+    }
     
     const body = await request.json()
     const { userId, password, email } = body
