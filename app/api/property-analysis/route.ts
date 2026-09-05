@@ -1,3 +1,16 @@
+// 2026-09-04: dead OpenRouter model replaced, and a note on why this recurs.
+//
+// deepseek/deepseek-r1-distill-llama-70b:free is no longer served. A request naming it
+// returns an error and this call site treats a failed completion as an empty
+// answer, so the feature degraded silently rather than failing loudly.
+//
+// OpenRouter's free tier CHURNS. Nineteen free models were available when this
+// was written and the set turns over regularly, so this name will die too. The
+// durable answer is the platform's own free order - Groq llama-3.3-70b, then
+// gemini-flash-latest - which has been stable. Switching provider is a larger
+// change than this repair, so for now the guard catches the next death instead:
+// audit-model-names runs on every build here and asks the provider rather than
+// trusting a list.
 // app/api/property-analysis/route.ts — javari-property
 // AI property analysis: price prediction, investment calc, market trends
 // Beats Zillow Zestimate, Redfin Estimate, Realtor.com
@@ -13,7 +26,7 @@ const OR   = process.env.OPENROUTER_API_KEY ?? ''
 async function aiAnalyze(prompt: string): Promise<string> {
   for (const [url, key, model] of [
     ['https://api.groq.com/openai/v1/chat/completions', GROQ, 'llama-3.3-70b-versatile'],
-    ['https://openrouter.ai/api/v1/chat/completions', OR, 'deepseek/deepseek-r1-distill-llama-70b:free'],
+    ['https://openrouter.ai/api/v1/chat/completions', OR, 'nvidia/nemotron-3.5-lightning:free'],
   ] as const) {
     if (!key) continue
     const res = await fetch(url, {
