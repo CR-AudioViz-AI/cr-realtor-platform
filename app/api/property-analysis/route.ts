@@ -25,7 +25,7 @@ const OR   = process.env.OPENROUTER_API_KEY ?? ''
 
 async function aiAnalyze(prompt: string): Promise<string> {
   for (const [url, key, model] of [
-    ['https://api.groq.com/openai/v1/chat/completions', GROQ, 'llama-3.3-70b-versatile'],
+    ['https://api.groq.com/openai/v1/chat/completions', GROQ, 'openai/gpt-oss-120b'],
     ['https://openrouter.ai/api/v1/chat/completions', OR, 'nvidia/nemotron-3.5-lightning:free'],
   ] as const) {
     if (!key) continue
