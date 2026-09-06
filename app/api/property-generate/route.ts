@@ -22,7 +22,7 @@ async function gen(p: string): Promise<string> {
     if (r.ok) { const d = await r.json() as {choices?:Array<{message?:{content?:string}}> }; const t = d.choices?.[0]?.message?.content ?? ''; if (t.length > 50) return t }
   } catch {} }
   if (!GROQ) throw new Error('no AI key')
-  const r = await fetch('https://api.groq.com/openai/v1/chat/completions', { method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${GROQ}`}, body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:2048,temperature:0.7,messages:[{role:'system',content:SYSTEM},{role:'user',content:p}]}) })
+  const r = await fetch('https://api.groq.com/openai/v1/chat/completions', { method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${GROQ}`}, body:JSON.stringify({model:'openai/gpt-oss-120b',max_tokens:2048,temperature:0.7,messages:[{role:'system',content:SYSTEM},{role:'user',content:p}]}) })
   if (!r.ok) throw new Error(`Groq ${r.status}`); const d = await r.json() as {choices?:Array<{message?:{content?:string}}> }; return d.choices?.[0]?.message?.content ?? ''
 }
 export async function GET() { return NextResponse.json({actions:ACTIONS,cost:COST+' credits',cost_usd:'$0.00'}) }
