@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     return NextResponse.json({
       success: false,
-      error: error.message
+      error: 'The request could not be completed.', code: 'INTERNAL_ERROR'
     }, { status: 500 })
   }
 }
