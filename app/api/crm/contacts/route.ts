@@ -88,7 +88,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     const { data: contacts, error } = await q;
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500, headers: { "Cache-Control": "no-store" } });
+      return NextResponse.json({ error: 'The request could not be completed.', code: 'INTERNAL_ERROR' }, { status: 500, headers: { "Cache-Control": "no-store" } });
     }
 
     return NextResponse.json(
