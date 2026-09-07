@@ -38,12 +38,12 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'The request could not be completed.', code: 'INTERNAL_ERROR' }, { status: 500 })
     }
 
     return NextResponse.json({ showings: data || [] })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'The request could not be completed.', code: 'INTERNAL_ERROR' }, { status: 500 })
   }
 }
 
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'The request could not be completed.', code: 'INTERNAL_ERROR' }, { status: 500 })
     }
 
     // Also create a lead from this showing request if customer info provided
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ showing })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'The request could not be completed.', code: 'INTERNAL_ERROR' }, { status: 500 })
   }
 }
 
@@ -146,11 +146,11 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'The request could not be completed.', code: 'INTERNAL_ERROR' }, { status: 500 })
     }
 
     return NextResponse.json({ showing: data })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'The request could not be completed.', code: 'INTERNAL_ERROR' }, { status: 500 })
   }
 }
