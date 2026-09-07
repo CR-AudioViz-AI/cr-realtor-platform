@@ -43,13 +43,13 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Properties fetch error:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'The request could not be completed.', code: 'INTERNAL_ERROR' }, { status: 500 })
     }
 
     return NextResponse.json({ properties: properties || [] })
   } catch (error: any) {
     console.error('Properties API error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'The request could not be completed.', code: 'INTERNAL_ERROR' }, { status: 500 })
   }
 }
 
@@ -77,12 +77,12 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Property insert error:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'The request could not be completed.', code: 'INTERNAL_ERROR' }, { status: 500 })
     }
 
     return NextResponse.json({ property: data })
   } catch (error: any) {
     console.error('Property POST error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'The request could not be completed.', code: 'INTERNAL_ERROR' }, { status: 500 })
   }
 }
